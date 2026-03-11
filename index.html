@@ -8,7 +8,7 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
-    background: linear-gradient(160deg, #fff7f3 0%, #fff 60%, #f0f4ff 100%);
+    background: #F5F5F7;
     min-height: 100vh;
     display: flex;
     justify-content: center;
@@ -17,7 +17,6 @@
     width: 100%;
     max-width: 480px;
     min-height: 100vh;
-    perspective: 1200px;
   }
 
   /* 페이지 넘기기 모션 */
@@ -33,25 +32,25 @@
     text-align: center;
   }
   @keyframes slideInRight {
-    0%   { opacity: 0; transform: translateX(60px); }
+    0%   { opacity: 0; transform: translateX(30px); }
     100% { opacity: 1; transform: translateX(0); }
   }
   @keyframes slideInLeft {
-    0%   { opacity: 0; transform: translateX(-60px); }
+    0%   { opacity: 0; transform: translateX(-30px); }
     100% { opacity: 1; transform: translateX(0); }
   }
   @keyframes slideOutLeft {
     0%   { opacity: 1; transform: translateX(0); }
-    100% { opacity: 0; transform: translateX(-60px); }
+    100% { opacity: 0; transform: translateX(-30px); }
   }
   @keyframes slideOutRight {
     0%   { opacity: 1; transform: translateX(0); }
-    100% { opacity: 0; transform: translateX(60px); }
+    100% { opacity: 0; transform: translateX(30px); }
   }
-  .flip-in      { animation: slideInRight  0.28s cubic-bezier(.4,0,.2,1) forwards; }
-  .flip-in-back { animation: slideInLeft   0.28s cubic-bezier(.4,0,.2,1) forwards; }
-  .flip-out      { animation: slideOutLeft  0.18s cubic-bezier(.4,0,.2,1) forwards; }
-  .flip-out-back { animation: slideOutRight 0.18s cubic-bezier(.4,0,.2,1) forwards; }
+  .flip-in      { animation: slideInRight  0.28s ease-out forwards; }
+  .flip-in-back { animation: slideInLeft   0.28s ease-out forwards; }
+  .flip-out      { animation: slideOutLeft  0.18s ease-in forwards; }
+  .flip-out-back { animation: slideOutRight 0.18s ease-in forwards; }
 
   /* 메인 타이포 */
   .main-title {
@@ -63,9 +62,9 @@
     line-height: 1;
   }
   .main-title span { color: #1C2B5E; }
-  h1 { font-size: 30px; font-weight: 800; color: #1A1A2E; line-height: 1.4; margin-bottom: 14px; }
-  h2 { font-size: 26px; font-weight: 800; color: #1A1A2E; line-height: 1.4; }
-  .sub { font-size: 18px; color: #9CA3AF; line-height: 1.8; margin-bottom: 44px; }
+  h1 { font-size: 30px; font-weight: 800; color: #1C2B5E; line-height: 1.4; margin-bottom: 14px; }
+  h2 { font-size: 26px; font-weight: 800; color: #1C2B5E; line-height: 1.4; }
+  .sub { font-size: 18px; color: #8B95A5; line-height: 1.8; margin-bottom: 44px; }
 
   /* 스텝 인디케이터 */
   .step-indicator {
@@ -74,7 +73,7 @@
   }
   .step-dot {
     width: 14px; height: 14px; border-radius: 50%;
-    background: #E5E7EB; transition: all 0.3s;
+    background: #E5E7EB; transition: background-color 0.3s, transform 0.3s;
     position: relative;
   }
   .step-dot.active {
@@ -89,95 +88,92 @@
   /* 버튼 */
   .btn-primary {
     padding: 15px 44px;
-    background: linear-gradient(135deg, #E8470A, #FF6B35);
+    background: #E8470A;
     color: #fff;
-    border: none; border-radius: 50px;
+    border: none; border-radius: 12px;
     font-size: 17px; font-weight: 700; cursor: pointer;
-    box-shadow: 0 6px 20px rgba(232,71,10,0.3);
-    transition: all 0.2s;
+    transition: background-color 0.2s;
     display: inline-block;
     letter-spacing: 0.5px;
   }
-  .btn-primary:active { transform: scale(0.97); box-shadow: 0 2px 10px rgba(232,71,10,0.2); }
+  .btn-primary:active { background: #D03D08; }
 
   .btn-full {
     width: 100%; padding: 18px;
-    background: linear-gradient(135deg, #E8470A, #FF6B35);
+    background: #E8470A;
     color: #fff;
-    border: none; border-radius: 16px;
+    border: none; border-radius: 12px;
     font-size: 18px; font-weight: 700; cursor: pointer;
-    box-shadow: 0 6px 20px rgba(232,71,10,0.25);
-    transition: all 0.2s;
+    transition: background-color 0.2s;
     letter-spacing: 0.5px;
   }
-  .btn-full:active { transform: scale(0.98); }
+  .btn-full:active { background: #D03D08; }
 
   .btn-secondary {
     width: 100%; padding: 16px;
-    background: #fff; color: #6B7280;
-    border: 2px solid #E5E7EB; border-radius: 16px;
+    background: #fff; color: #8B95A5;
+    border: 2px solid #E5E7EB; border-radius: 12px;
     font-size: 17px; font-weight: 600; cursor: pointer;
-    margin-top: 12px; transition: all 0.2s;
+    margin-top: 12px; transition: background-color 0.2s;
   }
-  .btn-secondary:active { background: #F9FAFB; }
+  .btn-secondary:active { background: #F5F5F7; }
 
   .btn-back {
     background: none; border: none;
-    color: #C4C9D4; font-size: 15px;
+    color: #8B95A5; font-size: 15px;
     cursor: pointer; padding: 8px 0;
     display: flex; align-items: center; gap: 6px;
     margin-bottom: 20px; font-weight: 500;
-    transition: color 0.2s;
+    transition: color 0.2s ease-out;
   }
-  .btn-back:hover { color: #9CA3AF; }
+  .btn-back:hover { color: #8B95A5; }
 
   /* 입력 */
   .field { margin-bottom: 20px; }
   .field label { font-size: 15px; font-weight: 700; color: #374151; display: block; margin-bottom: 8px; letter-spacing: 0.3px; }
   .field input {
     width: 100%; padding: 16px 18px;
-    border: 2px solid #F0F0F0;
-    border-radius: 14px;
+    border: 2px solid #E5E7EB;
+    border-radius: 12px;
     font-size: 17px; outline: none;
     background: #fff;
     font-family: inherit;
-    transition: border-color 0.2s, box-shadow 0.2s;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    transition: border-color 0.2s;
   }
   .field input:focus {
     border-color: #E8470A;
-    box-shadow: 0 0 0 4px rgba(232,71,10,0.08);
   }
   .error { color: #C92A2A; font-size: 14px; margin-top: 8px; font-weight: 500; }
 
   /* 진행바 */
   .progress-wrap { margin-bottom: 32px; }
   .progress-meta { display: flex; justify-content: space-between; margin-bottom: 12px; align-items: center; }
-  .progress-num { font-size: 13px; font-weight: 700; color: #C4C9D4; letter-spacing: 1px; }
+  .progress-num { font-size: 13px; font-weight: 700; color: #8B95A5; letter-spacing: 1px; }
   .progress-stage {
     font-size: 13px; font-weight: 800; color: #E8470A;
     background: rgba(232,71,10,0.08);
-    padding: 4px 10px; border-radius: 20px;
+    padding: 4px 10px; border-radius: 12px;
     letter-spacing: 1px;
   }
   .progress-track {
-    height: 4px; background: #F0F0F0;
+    height: 4px; background: #E5E7EB;
     border-radius: 4px; overflow: hidden;
   }
   .progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, #E8470A, #FF6B35);
-    border-radius: 4px; transition: width 0.4s cubic-bezier(.4,0,.2,1);
+    background: #E8470A;
+    border-radius: 4px; transition: width 0.4s ease-out;
   }
 
   /* 상황 박스 */
   .situation-box {
     font-size: 16px;
-    color: #9CA3AF;
+    color: #8B95A5;
     line-height: 1.8;
     margin-bottom: 8px;
-    padding-bottom: 20px;
+    padding: 0 0 20px 14px;
     border-bottom: 1.5px dashed #E5E7EB;
+    border-left: 3px solid #E8470A;
     font-weight: 500;
   }
   .situation-label {
@@ -190,34 +186,33 @@
 
   /* 질문 */
   .q-text {
-    font-size: 22px; font-weight: 800; color: #1A1A2E;
+    font-size: 22px; font-weight: 800; color: #1C2B5E;
     line-height: 1.5; margin-bottom: 28px; margin-top: 4px;
   }
   .option-list { display: flex; flex-direction: column; gap: 14px; }
   .option-btn {
     width: 100%; padding: 20px 22px;
     background: #fff;
-    border: 2px solid #F0F0F0;
-    border-radius: 16px; font-size: 17px; font-weight: 500;
+    border: 2px solid #E5E7EB;
+    border-radius: 12px; font-size: 17px; font-weight: 500;
     color: #374151; text-align: left; cursor: pointer;
     line-height: 1.6; font-family: inherit;
-    transition: all 0.18s;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    transition: border-color 0.18s, background-color 0.18s, color 0.18s;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
     display: flex; align-items: center; gap: 14px;
   }
-  .option-btn:active { transform: scale(0.98); }
+  .option-btn:active { background: #F5F5F7; }
   .option-btn.selected {
-    background: linear-gradient(135deg, #FFF4EF, #FFF0EB);
+    background: #FFF4EF;
     border-color: #E8470A;
     color: #E8470A; font-weight: 700;
-    box-shadow: 0 4px 16px rgba(232,71,10,0.12);
   }
   .option-num {
     min-width: 28px; height: 28px; border-radius: 50%;
-    background: #F3F4F6; color: #9CA3AF;
+    background: #F5F5F7; color: #8B95A5;
     display: flex; align-items: center; justify-content: center;
     font-size: 13px; font-weight: 700;
-    transition: all 0.18s; flex-shrink: 0;
+    transition: background-color 0.18s, color 0.18s; flex-shrink: 0;
   }
   .option-btn.selected .option-num {
     background: #E8470A; color: #fff;
@@ -225,43 +220,42 @@
 
   /* 복수선택 */
   .multi-hint {
-    font-size: 15px; color: #C4C9D4;
+    font-size: 15px; color: #8B95A5;
     margin-bottom: 20px; font-weight: 500;
   }
 
   /* 결과 */
   .result-header { text-align: center; margin-bottom: 28px; }
   .result-eyebrow {
-    font-size: 12px; font-weight: 800; color: #C4C9D4;
+    font-size: 12px; font-weight: 800; color: #8B95A5;
     letter-spacing: 3px; margin-bottom: 8px;
   }
   .result-card {
     background: #fff;
-    border-radius: 20px;
+    border-radius: 12px;
     padding: 32px 24px;
     margin-bottom: 16px;
     text-align: center;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
     position: relative; overflow: hidden;
   }
   .result-card::before {
     content: '';
     position: absolute; top: 0; left: 0; right: 0; height: 4px;
-    background: linear-gradient(90deg, #E8470A, #FF6B35);
+    background: #E8470A;
   }
   .result-stage-badge {
     display: inline-block; color: #fff;
-    border-radius: 50px; padding: 8px 22px;
+    border-radius: 12px; padding: 8px 22px;
     font-size: 15px; font-weight: 800; margin-bottom: 18px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     letter-spacing: 1px;
   }
   .result-msg {
-    font-size: 19px; color: #1A1A2E;
+    font-size: 19px; color: #1C2B5E;
     line-height: 1.9; white-space: pre-line; font-weight: 500;
   }
   .result-sub {
-    font-size: 15px; color: #9CA3AF;
+    font-size: 15px; color: #8B95A5;
     margin-top: 14px; line-height: 1.7;
     white-space: pre-line;
   }
@@ -269,24 +263,24 @@
   /* 단계 요약 */
   .stage-summary {
     background: #fff;
-    border-radius: 20px;
+    border-radius: 12px;
     padding: 24px;
     margin-bottom: 28px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
   }
   .summary-title {
-    font-size: 14px; font-weight: 800; color: #C4C9D4;
+    font-size: 14px; font-weight: 800; color: #8B95A5;
     margin-bottom: 20px; letter-spacing: 1px; text-align: center;
   }
   .stage-boxes { display: flex; gap: 10px; }
   .stage-box { flex: 1; text-align: center; }
   .stage-circle {
-    width: 100%; padding-top: 100%; border-radius: 16px;
+    width: 100%; padding-top: 100%; border-radius: 12px;
     position: relative; margin-bottom: 8px;
-    transition: all 0.3s;
+    transition: background-color 0.3s;
   }
   .stage-circle.main {
-    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
     transform: scale(1.05);
   }
   .stage-circle span {
@@ -299,52 +293,49 @@
   /* 관리자 */
   .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
   .admin-total { font-size: 36px; font-weight: 900; color: #E8470A; }
-  .admin-total-label { font-size: 13px; color: #9CA3AF; }
+  .admin-total-label { font-size: 13px; color: #8B95A5; }
   .chart-card {
-    background: #fff; border-radius: 20px;
+    background: #fff; border-radius: 12px;
     padding: 24px; margin-bottom: 16px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
   }
-  .chart-title { font-size: 13px; font-weight: 800; color: #C4C9D4; margin-bottom: 24px; letter-spacing: 1px; }
+  .chart-title { font-size: 13px; font-weight: 800; color: #8B95A5; margin-bottom: 24px; letter-spacing: 1px; }
   .bar-row { margin-bottom: 18px; }
   .bar-meta { display: flex; justify-content: space-between; margin-bottom: 8px; }
-  .bar-label { font-size: 16px; font-weight: 700; color: #1A1A2E; }
-  .bar-count { font-size: 15px; color: #9CA3AF; }
-  .bar-track { height: 10px; background: #F3F4F6; border-radius: 10px; overflow: hidden; }
-  .bar-fill { height: 100%; border-radius: 10px; transition: width 0.6s cubic-bezier(.4,0,.2,1); }
+  .bar-label { font-size: 16px; font-weight: 700; color: #1C2B5E; }
+  .bar-count { font-size: 15px; color: #8B95A5; }
+  .bar-track { height: 10px; background: #F5F5F7; border-radius: 10px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 10px; transition: width 0.6s ease-out; }
   .btn-csv {
     width: 100%; padding: 16px;
-    background: linear-gradient(135deg, #E8470A, #FF6B35);
-    color: #fff; border: none; border-radius: 14px;
+    background: #E8470A;
+    color: #fff; border: none; border-radius: 12px;
     font-size: 16px; font-weight: 700; cursor: pointer;
     margin-bottom: 12px;
-    box-shadow: 0 4px 16px rgba(232,71,10,0.25);
+    transition: background-color 0.2s;
   }
+  .btn-csv:active { background: #D03D08; }
   .btn-refresh {
     width: 100%; padding: 16px;
-    background: #F9FAFB; color: #6B7280;
-    border: 2px solid #E5E7EB; border-radius: 14px;
+    background: #F5F5F7; color: #8B95A5;
+    border: 2px solid #E5E7EB; border-radius: 12px;
     font-size: 15px; font-weight: 600; cursor: pointer;
+    transition: background-color 0.2s;
   }
+  .btn-refresh:active { background: #E5E7EB; }
 
   /* 로딩 */
   .loading-wrap { text-align: center; padding: 60px 0; }
   .spinner {
-    width: 36px; height: 36px; border: 4px solid #F0F0F0;
+    width: 36px; height: 36px; border: 4px solid #E5E7EB;
     border-top-color: #E8470A; border-radius: 50%;
     animation: spin 0.7s linear infinite; margin: 0 auto 16px;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .loading-text { font-size: 15px; color: #9CA3AF; }
+  .loading-text { font-size: 15px; color: #8B95A5; }
   .error-banner {
     background: #FFF4F0; border: 1px solid #FECACA; border-radius: 12px;
     padding: 12px 16px; margin-bottom: 16px; font-size: 14px; color: #C92A2A;
-  }
-
-  /* 장식 원 */
-  .deco-circle {
-    position: fixed; border-radius: 50%;
-    pointer-events: none; z-index: 0;
   }
 </style>
 </head>
@@ -606,7 +597,7 @@ function buildInput() {
 
   screen.appendChild(el("h2", "", "정보를 입력해주세요"));
   const sub = el("p", "", "진단을 시작하기 위해 정보를 입력해주세요.");
-  sub.style.cssText = "font-size:16px;color:#9CA3AF;margin:10px 0 36px;line-height:1.6";
+  sub.style.cssText = "font-size:16px;color:#8B95A5;margin:10px 0 36px;line-height:1.6";
   screen.appendChild(sub);
 
   const f1 = el("div", "field");
@@ -746,7 +737,7 @@ function buildResult() {
 
   const card = el("div","result-card");
   const badge = el("div","result-stage-badge", `${r.stage} · ${r.label}`);
-  badge.style.background = `linear-gradient(135deg, ${r.color}, ${r.color}CC)`;
+  badge.style.background = r.color;
   card.appendChild(badge);
   card.appendChild(el("p","result-msg", r.message.replace(/\n/g,"<br>")));
 
@@ -768,9 +759,9 @@ function buildResult() {
     const isMain = s === key;
     const box = el("div","stage-box");
     const circle = el("div", isMain ? "stage-circle main" : "stage-circle");
-    circle.style.background = isMain ? `linear-gradient(135deg, ${r.color}, ${r.color}CC)` : "#F3F4F6";
+    circle.style.background = isMain ? r.color : "#F5F5F7";
     const span = el("span","",s);
-    span.style.color = isMain ? "#fff" : "#C4C9D4";
+    span.style.color = isMain ? "#fff" : "#8B95A5";
     circle.appendChild(span);
     box.appendChild(circle);
     const label = el("div","stage-label", isMain ? "최우선" : "");
@@ -799,7 +790,7 @@ function buildAdmin() {
   if (state.adminLoading) {
     header.innerHTML = `
       <div>
-        <div style="font-size:12px;font-weight:800;color:#C4C9D4;letter-spacing:3px">ADMIN</div>
+        <div style="font-size:12px;font-weight:800;color:#8B95A5;letter-spacing:3px">ADMIN</div>
         <h2 style="font-size:24px;margin-top:4px">진단 현황</h2>
       </div>`;
     screen.appendChild(header);
@@ -817,7 +808,7 @@ function buildAdmin() {
 
   header.innerHTML = `
     <div>
-      <div style="font-size:12px;font-weight:800;color:#C4C9D4;letter-spacing:3px">ADMIN</div>
+      <div style="font-size:12px;font-weight:800;color:#8B95A5;letter-spacing:3px">ADMIN</div>
       <h2 style="font-size:24px;margin-top:4px">진단 현황</h2>
     </div>
     <div style="text-align:right">
