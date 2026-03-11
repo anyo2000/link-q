@@ -403,11 +403,12 @@ const RESULTS = {
     message: "어렵게 클로징까지 왔는데\n포기할 순 없죠.\n오늘 클로징 주도권을 배워보세요." },
 };
 
+const ADMIN_EMP_ID = "8089446";
 const STAGE_COLORS = { L: "#3B5BDB", I: "#0CA678", N: "#E8470A", K: "#C92A2A" };
 const TOTAL_STEPS = QUESTIONS.length + 1;
 
 let state = {
-  screen: "main", branch: "", empId: "",
+  screen: "input", branch: "", empId: "", isAdmin: false,
   step: 0, answers: [], q5selected: [], resultKey: null, adminData: [],
 };
 
@@ -453,6 +454,7 @@ function getResultKey(answers, q5selected) {
 function checkAdmin() {
   if (new URLSearchParams(window.location.search).has("admin")) {
     state.screen = "admin";
+    state.isAdmin = true;
     state.adminData = loadAll();
   }
 }
@@ -524,20 +526,29 @@ function buildMain() {
   screen.appendChild(ind);
 
   const btn = el("button", "btn-primary", "진단 시작하기 →");
-  btn.onclick = () => navigate("input");
+  btn.onclick = () => navigate("quiz", () => { state.step=0; state.answers=[]; state.q5selected=[]; });
   screen.appendChild(btn);
+
+  if (state.isAdmin) {
+    const adminBtn = el("button", "btn-secondary", "관리자 대시보드");
+    adminBtn.style.cssText = "margin-top:16px;max-width:280px;";
+    adminBtn.onclick = () => navigate("admin", () => { state.adminData = loadAll(); });
+    screen.appendChild(adminBtn);
+  }
+
   return screen;
 }
 
-// ── 입력 ──────────────────────────────────────────────
+// ── 입력 (첫 화면) ──────────────────────────────────────
 function buildInput() {
   const screen = el("div", "screen");
-  const back = el("button", "btn-back", "← 이전");
-  back.onclick = () => navigate("main");
-  screen.appendChild(back);
+
+  const title = el("div", "main-title", "L<span>·</span>I<span>·</span>N<span>·</span>K");
+  title.style.textAlign = "center";
+  screen.appendChild(title);
 
   screen.appendChild(el("h2", "", "정보를 입력해주세요"));
-  const sub = el("p", "", "결과 분석을 위해 사용됩니다.");
+  const sub = el("p", "", "진단을 시작하기 위해 정보를 입력해주세요.");
   sub.style.cssText = "font-size:16px;color:#9CA3AF;margin:10px 0 36px;line-height:1.6";
   screen.appendChild(sub);
 
@@ -562,7 +573,8 @@ function buildInput() {
   btn.onclick = () => {
     if (!state.branch.trim()) { err.textContent="지점명을 입력해주세요."; err.style.display="block"; return; }
     if (!/^\d{7}$/.test(state.empId)) { err.textContent="사번은 숫자 7자리로 입력해주세요."; err.style.display="block"; return; }
-    navigate("quiz", () => { state.step=0; state.answers=[]; state.q5selected=[]; });
+    state.isAdmin = (state.empId === ADMIN_EMP_ID);
+    navigate("main");
   };
   screen.appendChild(btn);
   return screen;
@@ -657,8 +669,8 @@ function buildQuiz() {
   const back = el("button","btn-back","← 이전");
   back.style.marginTop="20px";
   back.onclick = () => {
-    if (state.step === 0) navigate("input");
-    else navigate("quiz", () => state.step--);
+    if (state.step === 0) navigate("main", null, true);
+    else navigate("quiz", () => state.step--, true);
   };
   screen.appendChild(back);
   return screen;
@@ -713,9 +725,9 @@ function buildResult() {
   screen.appendChild(summary);
 
   const btn = el("button","btn-secondary","다시 설문 참여하기");
-  btn.onclick = () => navigate("main", () => {
+  btn.onclick = () => navigate("input", () => {
     state.branch=""; state.empId=""; state.answers=[];
-    state.q5selected=[]; state.step=0; state.resultKey=null;
+    state.q5selected=[]; state.step=0; state.resultKey=null; state.isAdmin=false;
   });
   screen.appendChild(btn);
   return screen;
@@ -772,6 +784,11 @@ function buildAdmin() {
   const refreshBtn = el("button","btn-refresh","새로고침");
   refreshBtn.onclick = () => { state.adminData=loadAll(); render(); };
   screen.appendChild(refreshBtn);
+
+  const backBtn = el("button","btn-back","← 메인으로");
+  backBtn.style.marginTop="20px";
+  backBtn.onclick = () => navigate("main", null, true);
+  screen.appendChild(backBtn);
   return screen;
 }
 
