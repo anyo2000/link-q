@@ -483,19 +483,25 @@ function fetchAdminData() {
   state.adminLoading = true;
   state.adminError = false;
   if (GAS_URL) {
-    fetch(GAS_URL)
-      .then(r => r.json())
-      .then(json => {
-        state.adminData = (json.data || []);
-        state.adminLoading = false;
-        render();
-      })
-      .catch(() => {
-        state.adminData = loadAll();
-        state.adminLoading = false;
-        state.adminError = true;
-        render();
-      });
+    const cbName = "_gasCallback_" + Date.now();
+    const script = document.createElement("script");
+    window[cbName] = function(json) {
+      state.adminData = (json.data || []);
+      state.adminLoading = false;
+      render();
+      delete window[cbName];
+      script.remove();
+    };
+    script.onerror = function() {
+      state.adminData = loadAll();
+      state.adminLoading = false;
+      state.adminError = true;
+      render();
+      delete window[cbName];
+      script.remove();
+    };
+    script.src = GAS_URL + "?callback=" + cbName;
+    document.body.appendChild(script);
   } else {
     state.adminData = loadAll();
     state.adminLoading = false;

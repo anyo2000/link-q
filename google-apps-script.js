@@ -48,11 +48,10 @@ function doPost(e) {
   }
 }
 
-function doGet() {
+function doGet(e) {
   try {
     const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_NAME);
     const rows = sheet.getDataRange().getValues();
-    const headers = rows[0];
     const data = [];
 
     for (let i = 1; i < rows.length; i++) {
@@ -67,8 +66,17 @@ function doGet() {
       });
     }
 
+    const json = JSON.stringify({ status: "ok", data: data });
+    const callback = e && e.parameter && e.parameter.callback;
+
+    if (callback) {
+      return ContentService
+        .createTextOutput(callback + "(" + json + ")")
+        .setMimeType(ContentService.MimeType.JAVASCRIPT);
+    }
+
     return ContentService
-      .createTextOutput(JSON.stringify({ status: "ok", data: data }))
+      .createTextOutput(json)
       .setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
     return ContentService
