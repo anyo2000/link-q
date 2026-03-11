@@ -327,6 +327,20 @@
     font-size: 15px; font-weight: 600; cursor: pointer;
   }
 
+  /* 로딩 */
+  .loading-wrap { text-align: center; padding: 60px 0; }
+  .spinner {
+    width: 36px; height: 36px; border: 4px solid #F0F0F0;
+    border-top-color: #E8470A; border-radius: 50%;
+    animation: spin 0.7s linear infinite; margin: 0 auto 16px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: 15px; color: #9CA3AF; }
+  .error-banner {
+    background: #FFF4F0; border: 1px solid #FECACA; border-radius: 12px;
+    padding: 12px 16px; margin-bottom: 16px; font-size: 14px; color: #C92A2A;
+  }
+
   /* 장식 원 */
   .deco-circle {
     position: fixed; border-radius: 50%;
@@ -403,17 +417,31 @@ const RESULTS = {
     message: "어렵게 클로징까지 왔는데\n포기할 순 없죠.\n오늘 클로징 주도권을 배워보세요." },
 };
 
+// ★ Google Apps Script 웹앱 URL (배포 후 여기에 붙여넣기)
+const GAS_URL = "https://script.google.com/macros/s/AKfycbwAKmPKGZo33qLwCi0m5w2JGM0eVp4idoBRr693AQuCmV9qQJZ8V7uIIOTa47riIYHGTA/exec";
+
 const ADMIN_EMP_ID = "8089446";
 const STAGE_COLORS = { L: "#3B5BDB", I: "#0CA678", N: "#E8470A", K: "#C92A2A" };
 const TOTAL_STEPS = QUESTIONS.length + 1;
 
 let state = {
   screen: "input", branch: "", empId: "", isAdmin: false,
-  step: 0, answers: [], q5selected: [], resultKey: null, adminData: [],
+  step: 0, answers: [], q5selected: [], resultKey: null,
+  adminData: [], adminLoading: false, adminError: false,
 };
 
 function saveResponse(data) {
+  // localStorage 백업 (오프라인용)
   try { localStorage.setItem("link_resp_" + Date.now(), JSON.stringify(data)); } catch(e) {}
+  // Google Sheets 전송
+  if (GAS_URL) {
+    fetch(GAS_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify(data),
+    }).catch(() => {});
+  }
 }
 function loadAll() {
   const items = [];
@@ -451,11 +479,34 @@ function getResultKey(answers, q5selected) {
   return { key: "L", aware: "all_good" };
 }
 
+function fetchAdminData() {
+  state.adminLoading = true;
+  state.adminError = false;
+  if (GAS_URL) {
+    fetch(GAS_URL)
+      .then(r => r.json())
+      .then(json => {
+        state.adminData = (json.data || []);
+        state.adminLoading = false;
+        render();
+      })
+      .catch(() => {
+        state.adminData = loadAll();
+        state.adminLoading = false;
+        state.adminError = true;
+        render();
+      });
+  } else {
+    state.adminData = loadAll();
+    state.adminLoading = false;
+  }
+}
+
 function checkAdmin() {
   if (new URLSearchParams(window.location.search).has("admin")) {
     state.screen = "admin";
     state.isAdmin = true;
-    state.adminData = loadAll();
+    fetchAdminData();
   }
 }
 
@@ -532,7 +583,7 @@ function buildMain() {
   if (state.isAdmin) {
     const adminBtn = el("button", "btn-secondary", "관리자 대시보드");
     adminBtn.style.cssText = "margin-top:16px;max-width:280px;";
-    adminBtn.onclick = () => navigate("admin", () => { state.adminData = loadAll(); });
+    adminBtn.onclick = () => navigate("admin", fetchAdminData);
     screen.appendChild(adminBtn);
   }
 
@@ -735,14 +786,29 @@ function buildResult() {
 
 // ── 관리자 ──────────────────────────────────────────────
 function buildAdmin() {
+  const screen = el("div","screen");
+  const header = el("div","admin-header");
+
+  // 로딩 중
+  if (state.adminLoading) {
+    header.innerHTML = `
+      <div>
+        <div style="font-size:12px;font-weight:800;color:#C4C9D4;letter-spacing:3px">ADMIN</div>
+        <h2 style="font-size:24px;margin-top:4px">진단 현황</h2>
+      </div>`;
+    screen.appendChild(header);
+    const lw = el("div","loading-wrap");
+    lw.innerHTML = '<div class="spinner"></div><div class="loading-text">데이터 불러오는 중…</div>';
+    screen.appendChild(lw);
+    return screen;
+  }
+
   const data = state.adminData;
   const total = data.length;
   const counts = {L:0,I:0,N:0,K:0};
   data.forEach(d => { if (counts[d.result]!==undefined) counts[d.result]++; });
   const maxCount = Math.max(...Object.values(counts), 1);
 
-  const screen = el("div","screen");
-  const header = el("div","admin-header");
   header.innerHTML = `
     <div>
       <div style="font-size:12px;font-weight:800;color:#C4C9D4;letter-spacing:3px">ADMIN</div>
@@ -753,6 +819,13 @@ function buildAdmin() {
       <div class="admin-total-label">총 응답</div>
     </div>`;
   screen.appendChild(header);
+
+  if (state.adminError) {
+    screen.appendChild(el("div","error-banner","서버 연결 실패 — 로컬 데이터를 표시합니다."));
+  }
+  if (!GAS_URL) {
+    screen.appendChild(el("div","error-banner","GAS_URL 미설정 — 로컬 데이터만 표시됩니다."));
+  }
 
   const chart = el("div","chart-card");
   chart.innerHTML = '<div class="chart-title">단계별 병목 분포</div>';
@@ -782,7 +855,7 @@ function buildAdmin() {
   screen.appendChild(csvBtn);
 
   const refreshBtn = el("button","btn-refresh","새로고침");
-  refreshBtn.onclick = () => { state.adminData=loadAll(); render(); };
+  refreshBtn.onclick = () => { fetchAdminData(); render(); };
   screen.appendChild(refreshBtn);
 
   const backBtn = el("button","btn-back","← 메인으로");
