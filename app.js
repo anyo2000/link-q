@@ -1,521 +1,1854 @@
-const QUESTIONS = [
-  {
-    id: "L", stage: "L단계",
-    situation: "소개받은 고객 첫 만남. 인사를 끝내고 본격적으로 대화를 시작하려 한다.",
-    text: "이런 상황에서 나는",
-    options: [
-      { label: "보험 얘기를 꺼낼 때 쓰는 멘트가 잡혀있다", value: 1 },
-      { label: "상황 봐서 하는데 매번 어떻게 시작할지 고민된다", value: 2 },
-      { label: "첫 마디를 어떻게 꺼내야 할지 늘 어렵다", value: 3 },
-    ],
-  },
-  {
-    id: "I", stage: "I단계",
-    situation: "본격적으로 보험 얘기를 시작해 니즈환기 하고 고객의 개인정보를 요청하려 한다.",
-    text: "이런 상황에서 나는",
-    options: [
-      { label: "고객 상황을 파악하고 개인정보까지 받아내는 흐름이 잡혀있다", value: 1 },
-      { label: "상황에 맞춰 진행하는 편이지만 가끔 고민될 때가 있다", value: 2 },
-      { label: "이 흐름에서 개인정보 요청하는 게 늘 어렵다", value: 3 },
-    ],
-  },
-  {
-    id: "N", stage: "N단계",
-    situation: "다음 방문때 고객에게 제안서를 보여주기로 했다. 40대 여성 기혼, 월 7만원 한도.",
-    text: "이런 상황에서 나는",
-    options: [
-      { label: "담보 설계할 때 어떤 담보부터 선택할지 순서가 잡혀있다", value: 1 },
-      { label: "고객 상황에 맞춰 구성하는 편이지만 솔직히 고민될 때가 있다", value: 2 },
-      { label: "어떤 담보를 넣고 어떤 담보를 빼야 할지 고민될 때가 많다", value: 3 },
-    ],
-  },
-  {
-    id: "K", stage: "K단계",
-    situation: "설명도 잘 듣고 긍정적이던 고객이 클로징 단계에서 조금 더 고민해보겠다고 한다.",
-    text: "이런 상황에서 나는",
-    options: [
-      { label: "고객의 결정을 끌어내는 흐름이 잡혀있다", value: 1 },
-      { label: "어떻게 결정을 이끌어 낼지 막힐 때가 가끔 있다", value: 2 },
-      { label: "고객이 부담가질까봐 알겠습니다 하고 기다리는 편이다", value: 3 },
-    ],
-  },
+/* ============================================================
+   LINK 컨설팅 진단 v2 — app.js
+   ============================================================ */
+
+// ─── Constants ──────────────────────────────────────────────
+
+var QUESTIONS = [
+  { stage: "L", text: "첫 만남에서 보험 얘기를 자연스럽게 꺼내는 것" },
+  { stage: "L", text: '고객이 "보험 됐어요"로 막을 때 대화를 이어가는 것' },
+  { stage: "I", text: "고객이 자기 보험에 문제가 있다고 느끼게 하는 것" },
+  { stage: "I", text: "자연스럽게 개인정보(인증번호)를 확보하는 것" },
+  { stage: "N", text: "한정된 예산에서 어떤 담보부터 넣을지 판단하는 것" },
+  { stage: "N", text: "보험료 부담 느끼는 고객에게 플랜을 제시하는 것" },
+  { stage: "K", text: '"생각해볼게요" 하는 고객의 결정을 이끄는 것' },
+  { stage: "K", text: '"비싸요" "나중에요" 같은 거절에 대응하는 것' },
 ];
 
-const Q5 = {
-  stage: "교육 목표",
-  text: "오늘 교육에서 가장 얻어가고 싶은 것은?",
-  options: [
-    { label: "고객 관심을 끄는 첫 마디", value: "L", stage: "L단계" },
-    { label: "고객 상황 파악하고 개인정보 받는 방법", value: "I", stage: "I단계" },
-    { label: "담보 우선순위 결정 기준", value: "N", stage: "N단계" },
-    { label: "망설이는 고객 클로징 방법", value: "K", stage: "K단계" },
-  ],
+var STAGES = [
+  { id: "L", name: "L단계", label: "연결", color: "#3B5BDB" },
+  { id: "I", name: "I단계", label: "진단", color: "#0CA678" },
+  { id: "N", name: "N단계", label: "설계", color: "#E8470A" },
+  { id: "K", name: "K단계", label: "해결", color: "#C92A2A" },
+];
+
+var SCALE_LABELS = ["전혀 어렵지 않다", "대체로 괜찮다", "보통이다", "좀 어렵다", "매우 어렵다"];
+
+var TIMEPOINTS = {
+  pre:      { id: "pre",      title: "교육 전 진단",      sub: "지금 나에게 어려운 단계를\n확인해보세요." },
+  post:     { id: "post",     title: "교육 후 진단",      sub: "교육을 마치고\n체감 변화를 확인합니다." },
+  followup: { id: "followup", title: "현장 활용도 체크",  sub: "현장에서 적용해본 경험을\n점검합니다." },
 };
 
-const RESULTS = {
-  L: { stage: "L단계", label: "후킹", color: "#3B5BDB",
-    message: "딱 한 줄의 질문으로 고객을\n집중시킬 수 있습니다.\n오늘 그 첫 문장을 가져가세요." },
-  I: { stage: "I단계", label: "진단", color: "#0CA678",
-    message: "고객 스스로 부족함을 느끼게 하는\n방법이 있습니다.\n오늘 그 분석법을 가져가세요." },
-  N: { stage: "N단계", label: "설계", color: "#E8470A",
-    message: "설계할 때 담보 우선순위\n결정 방법이 궁금하신가요?\n오늘 그 기준을 가져가세요." },
-  K: { stage: "K단계", label: "클로징", color: "#C92A2A",
-    message: "어렵게 클로징까지 왔는데\n포기할 순 없죠.\n오늘 클로징 주도권을 배워보세요." },
+var BONUS_APPLIED_OPTIONS = [
+  { id: "hooking", label: "후킹 화법 (첫 마디 꺼내기)" },
+  { id: "analysis", label: "간편분석지 활용" },
+  { id: "priority", label: "우선순위 기반 설계" },
+  { id: "closing", label: "클로징 화법" },
+];
+
+var GAS_URL = "https://script.google.com/macros/s/AKfycbzhkQyGbLI67jGRjJnZLx90df7i5-cQ8-E1VHvVtusjShE6IbqnOoXx06sgEMdNoZapFQ/exec";
+
+var ADMIN_IDS = ["8089446"];
+
+var STAGE_COLORS = { L: "#3B5BDB", I: "#0CA678", N: "#E8470A", K: "#C92A2A" };
+
+var RESULT_MESSAGES = {
+  L: "고객과의 첫 만남에서\n대화의 물꼬를 트는 것이\n가장 큰 과제입니다.\n후킹 기법에 집중해보세요.",
+  I: "고객이 스스로 문제를 느끼게\n만드는 과정이 핵심입니다.\n진단 기법에 집중해보세요.",
+  N: "한정된 예산 안에서\n최적의 설계를 하는 것이\n가장 큰 과제입니다.\n우선순위 기준을 가져가세요.",
+  K: "거의 다 왔는데\n마지막 결정을 이끌어내는 것이\n가장 큰 과제입니다.\n클로징 화법을 집중해서 배워보세요.",
 };
 
-// ★ Google Apps Script 웹앱 URL (배포 후 여기에 붙여넣기)
-const GAS_URL = "https://script.google.com/macros/s/AKfycbxILNgceUt4O34MhiazLNliGE4O90ePGODQsg0jJ-jrVHpCgXpXlHgzVH7vIXRgbedUhA/exec";
-
-const ADMIN_EMP_ID = "8089446";
-const STAGE_COLORS = { L: "#3B5BDB", I: "#0CA678", N: "#E8470A", K: "#C92A2A" };
-const TOTAL_STEPS = QUESTIONS.length + 1;
-
-let state = {
-  screen: "input", branch: "", empId: "", isAdmin: false,
-  step: 0, answers: [], q5selected: [], resultKey: null,
-  adminData: [], adminLoading: false, adminError: false,
+// 시점별 결과 타이틀
+var RESULT_TITLES = {
+  pre: "오늘 집중해서 들을 단계",
+  post: "앞으로 더 연습할 단계",
+  followup: "현장에서 아직 어려운 단계",
 };
 
-function saveResponse(data) {
-  // localStorage 백업 (오프라인용)
-  try { localStorage.setItem("link_resp_" + Date.now(), JSON.stringify(data)); } catch(e) {}
-  // Google Sheets 전송
-  if (GAS_URL) {
-    fetch(GAS_URL, {
-      method: "POST",
-      mode: "no-cors",
-      headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify(data),
-    }).catch(() => {});
-  }
-}
-function loadAll() {
-  const items = [];
-  try {
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (k && k.startsWith("link_resp_")) {
-        const v = localStorage.getItem(k);
-        if (v) items.push(JSON.parse(v));
-      }
-    }
-  } catch(e) {}
-  return items;
-}
+// ─── State ──────────────────────────────────────────────────
 
-function getWeakStages(answers) {
-  const w = new Set();
-  if (answers[0] === 2 || answers[0] === 3) w.add("L");
-  if (answers[1] === 2 || answers[1] === 3) w.add("I");
-  if (answers[2] === 2 || answers[2] === 3) w.add("N");
-  if (answers[3] === 2 || answers[3] === 3) w.add("K");
-  return w;
-}
+var state = {
+  screen: "input",
+  mode: "fp",
+  loading: false,
+  error: null,
+  // FP
+  empId: "",
+  branch: "",
+  timepoint: "",
+  step: 0,
+  answers: new Array(8).fill(0),
+  bonusStage: "",
+  bonusApplied: [],
+  bonusReaction: "",
+  comment: "",
+  // Admin
+  adminTab: "overview",
+  adminData: null,
+  adminBranch: null,
+  adminFP: null,
+  // Manager
+  managerBranch: "",
+  managerData: null,
+  managerFP: null,
+  // Charts
+  _charts: {},
+  _navBack: false,
+};
 
-function getResultKey(answers, q5selected) {
-  const weak = getWeakStages(answers);
-  if (q5selected.length > 0) {
-    for (const s of q5selected) {
-      if (weak.has(s)) return { key: s, aware: true };
-    }
-    return { key: q5selected[0], aware: "strong" };
-  }
-  const order = ["L","I","N","K"];
-  for (const s of order) { if (weak.has(s)) return { key: s, aware: false }; }
-  return { key: "L", aware: "all_good" };
-}
-
-function fetchAdminData() {
-  state.adminLoading = true;
-  state.adminError = false;
-  if (GAS_URL) {
-    const cbName = "_gasCallback_" + Date.now();
-    const script = document.createElement("script");
-    window[cbName] = function(json) {
-      state.adminData = (json.data || []);
-      state.adminLoading = false;
-      render();
-      delete window[cbName];
-      script.remove();
-    };
-    script.onerror = function() {
-      state.adminData = loadAll();
-      state.adminLoading = false;
-      state.adminError = true;
-      render();
-      delete window[cbName];
-      script.remove();
-    };
-    script.src = GAS_URL + "?callback=" + cbName;
-    document.body.appendChild(script);
-  } else {
-    state.adminData = loadAll();
-    state.adminLoading = false;
-  }
-}
-
-function checkAdmin() {
-  if (new URLSearchParams(window.location.search).has("admin")) {
-    state.screen = "admin";
-    state.isAdmin = true;
-    fetchAdminData();
-  }
-}
+// ─── Utilities ──────────────────────────────────────────────
 
 function el(tag, cls, html) {
-  const e = document.createElement(tag);
-  if (cls) e.className = cls;
-  if (html !== undefined) e.innerHTML = html;
-  return e;
+  var node = document.createElement(tag);
+  if (cls) node.className = cls;
+  if (html !== undefined && html !== null) node.innerHTML = html;
+  return node;
 }
 
-// 카드 플립 전환
 function navigate(newScreen, stepFn, isBack) {
-  const app = document.getElementById("app");
-  const current = app.firstChild;
-  if (current) {
-    current.classList.add(isBack ? "flip-out-back" : "flip-out");
-    setTimeout(() => {
-      if (stepFn) stepFn();
-      state.screen = newScreen;
-      state._navBack = isBack;
-      render();
-    }, 180);
-  } else {
+  var app = document.getElementById("app");
+  var current = app.firstElementChild;
+  if (!current) {
     if (stepFn) stepFn();
     state.screen = newScreen;
+    state._navBack = !!isBack;
     render();
+    return;
   }
+  current.classList.remove("flip-in", "flip-in-back");
+  current.classList.add(isBack ? "flip-out-back" : "flip-out");
+  setTimeout(function() {
+    if (stepFn) stepFn();
+    state.screen = newScreen;
+    state._navBack = !!isBack;
+    render();
+  }, 180);
 }
 
+// ─── JSONP & POST ───────────────────────────────────────────
+
+function jsonpFetch(action, params, callback) {
+  if (!GAS_URL) { callback({ error: "GAS_URL 미설정" }); return; }
+  var cbName = "_cb_" + Date.now() + "_" + Math.random().toString(36).slice(2);
+  var url = GAS_URL + "?callback=" + cbName + "&action=" + action;
+  if (params) {
+    Object.keys(params).forEach(function(k) {
+      url += "&" + k + "=" + encodeURIComponent(params[k]);
+    });
+  }
+  var script = document.createElement("script");
+  window[cbName] = function(data) {
+    callback(data);
+    delete window[cbName];
+    script.remove();
+  };
+  script.onerror = function() {
+    callback({ error: "서버 연결 실패" });
+    delete window[cbName];
+    script.remove();
+  };
+  script.src = url;
+  document.body.appendChild(script);
+}
+
+function postData(data) {
+  try { localStorage.setItem("link_v2_" + Date.now(), JSON.stringify(data)); } catch(e) {}
+  if (!GAS_URL) return;
+  // GET 방식으로 저장 (GAS POST 리다이렉트 문제 회피)
+  jsonpFetch("save", { data: JSON.stringify(data) }, function() {});
+}
+
+// ─── Helpers ────────────────────────────────────────────────
+
+// 동점이면 L→I→N→K 순서로 앞단계 우선 (프로세스 앞단부터 잡아야 함)
+// 반환: { primary: "L", tied: ["L", "K"] } — tied는 동점인 단계들
+function getWeakestStage(answers) {
+  var avgs = [];
+  for (var i = 0; i < 4; i++) {
+    var a = answers[i * 2] || 0;
+    var b = answers[i * 2 + 1] || 0;
+    avgs.push({ id: STAGES[i].id, avg: (a + b) / 2 });
+  }
+  var maxAvg = Math.max.apply(null, avgs.map(function(x) { return x.avg; }));
+  var tied = avgs.filter(function(x) { return x.avg === maxAvg; }).map(function(x) { return x.id; });
+  // L→I→N→K 순서로 첫 번째가 primary
+  return { primary: tied[0], tied: tied };
+}
+
+function getStageAvgs(answers) {
+  var result = {};
+  for (var i = 0; i < 4; i++) {
+    var a = answers[i * 2] || 0;
+    var b = answers[i * 2 + 1] || 0;
+    result[STAGES[i].id] = (a + b) / 2;
+  }
+  return result;
+}
+
+function stageInfo(id) {
+  for (var i = 0; i < STAGES.length; i++) {
+    if (STAGES[i].id === id) return STAGES[i];
+  }
+  return STAGES[0];
+}
+
+// ─── Render Engine ──────────────────────────────────────────
+
 function render() {
-  const app = document.getElementById("app");
+  Object.keys(state._charts).forEach(function(id) {
+    try { state._charts[id].destroy(); } catch(e) {}
+  });
+  state._charts = {};
+
+  var app = document.getElementById("app");
   app.innerHTML = "";
-  const scr = buildScreen();
+  var scr = buildScreen();
   app.appendChild(scr);
   scr.classList.add(state._navBack ? "flip-in-back" : "flip-in");
   state._navBack = false;
+  requestAnimationFrame(function() {
+    requestAnimationFrame(renderCharts);
+  });
 }
 
 function buildScreen() {
   switch (state.screen) {
-    case "main":   return buildMain();
-    case "input":  return buildInput();
-    case "quiz":   return buildQuiz();
+    case "cover": return buildCover();
+    case "input": return buildInput();
+    case "quiz": return buildQuiz();
+    case "bonus": return buildBonus();
     case "result": return buildResult();
-    case "admin":  return buildAdmin();
-    default:       return buildMain();
+    case "adminLogin": return buildAdminLogin();
+    case "admin": return buildAdmin();
+    case "adminBranchDetail": return buildAdminBranchDetail();
+    case "adminFPDetail": return buildAdminFPDetail();
+    case "managerLogin": return buildManagerLogin();
+    case "manager": return buildManager();
+    case "managerFP": return buildManagerFP();
+    default: return buildInput();
   }
 }
 
-// ── 메인 ──────────────────────────────────────────────
-function buildMain() {
-  const screen = el("div", "screen center");
+// ─── Screen: Cover (표지) ───────────────────────────────────
 
-  const title = el("div", "main-title", "L<span>·</span>I<span>·</span>N<span>·</span>K");
-  screen.appendChild(title);
+function buildCover() {
+  var tp = TIMEPOINTS[state.timepoint] || TIMEPOINTS.pre;
+  var wrap = el("div", "screen center");
 
-  screen.appendChild(el("h1", "", "지금 나에게 부족한<br>단계가 어딘지 아시나요?"));
-  screen.appendChild(el("p", "sub", "5가지 질문으로<br>성장 포인트를 찾아보세요."));
+  var title = el("div", "main-title", "L<span>·</span>I<span>·</span>N<span>·</span>K");
+  wrap.appendChild(title);
+
+  var h = el("h1", null, tp.title);
+  wrap.appendChild(h);
+
+  var sub = el("p", "sub", tp.sub.replace(/\n/g, "<br>"));
+  wrap.appendChild(sub);
 
   // 스텝 인디케이터
-  const ind = el("div", "step-indicator");
-  ["L","I","N","K"].forEach((s, i) => {
-    const dot = el("div", "step-dot");
+  var ind = el("div", "step-indicator");
+  ["L","I","N","K"].forEach(function(s, i) {
+    var dot = el("div", "step-dot");
     dot.title = s + "단계";
     ind.appendChild(dot);
     if (i < 3) ind.appendChild(el("div", "step-line"));
   });
-  screen.appendChild(ind);
+  wrap.appendChild(ind);
 
-  const btn = el("button", "btn-primary", "진단 시작하기 →");
-  btn.onclick = () => navigate("quiz", () => { state.step=0; state.answers=[]; state.q5selected=[]; });
-  screen.appendChild(btn);
+  var btn = el("button", "btn-primary", "진단 시작하기 →");
+  btn.addEventListener("click", function() { navigate("input"); });
+  wrap.appendChild(btn);
 
-  if (state.isAdmin) {
-    const adminBtn = el("button", "btn-secondary", "관리자 대시보드");
-    adminBtn.style.cssText = "margin-top:16px;max-width:280px;";
-    adminBtn.onclick = () => navigate("admin", fetchAdminData);
-    screen.appendChild(adminBtn);
-  }
-
-  return screen;
+  return wrap;
 }
 
-// ── 입력 (첫 화면) ──────────────────────────────────────
+// ─── Screen: Input ──────────────────────────────────────────
+
 function buildInput() {
-  const screen = el("div", "screen");
+  var tp = TIMEPOINTS[state.timepoint] || TIMEPOINTS.pre;
+  var wrap = el("div", "screen");
 
-  const title = el("div", "main-title", "L<span>·</span>I<span>·</span>N<span>·</span>K");
-  title.style.textAlign = "center";
-  screen.appendChild(title);
+  var back = el("button", "btn-back", "← 이전");
+  back.addEventListener("click", function() { navigate("cover", null, true); });
+  wrap.appendChild(back);
 
-  screen.appendChild(el("h2", "", "정보를 입력해주세요"));
-  const sub = el("p", "", "진단을 시작하기 위해 정보를 입력해주세요.");
-  sub.style.cssText = "font-size:16px;color:#8B95A5;margin:10px 0 36px;line-height:1.6";
-  screen.appendChild(sub);
+  var badge = el("div", "progress-stage", tp.title);
+  badge.style.cssText = "display:inline-block;margin-bottom:20px;";
+  wrap.appendChild(badge);
 
-  const f1 = el("div", "field");
-  f1.innerHTML = "<label>지점명</label>";
-  const inp1 = document.createElement("input");
-  inp1.type="text"; inp1.placeholder="예) 은계지점"; inp1.value=state.branch;
-  inp1.oninput = e => state.branch = e.target.value;
-  f1.appendChild(inp1); screen.appendChild(f1);
+  wrap.appendChild(el("h2", null, "정보를 입력해주세요"));
+  var sub = el("p", null, "진단을 시작하기 위해 정보를 입력해주세요.");
+  sub.style.cssText = "font-size:16px;color:#8B95A5;margin:10px 0 32px;line-height:1.6";
+  wrap.appendChild(sub);
 
-  const f2 = el("div", "field");
-  f2.innerHTML = "<label>사번 (숫자 7자리)</label>";
-  const inp2 = document.createElement("input");
-  inp2.type="tel"; inp2.placeholder="예) 1234567"; inp2.value=state.empId; inp2.maxLength=7;
-  inp2.oninput = e => state.empId = e.target.value.replace(/\D/g,"").slice(0,7);
-  f2.appendChild(inp2); screen.appendChild(f2);
+  var fieldBranch = el("div", "field");
+  fieldBranch.innerHTML = "<label>지점명</label>";
+  var inputBranch = el("input");
+  inputBranch.type = "text";
+  inputBranch.placeholder = "예) 은계지점";
+  inputBranch.value = state.branch;
+  inputBranch.addEventListener("input", function(e) { state.branch = e.target.value.trim(); });
+  fieldBranch.appendChild(inputBranch);
+  wrap.appendChild(fieldBranch);
 
-  const err = el("p","error",""); err.style.display="none"; screen.appendChild(err);
+  var fieldEmp = el("div", "field");
+  fieldEmp.innerHTML = "<label>사번 (숫자 7자리)</label>";
+  var inputEmp = el("input");
+  inputEmp.type = "tel";
+  inputEmp.placeholder = "예) 1234567";
+  inputEmp.maxLength = 7;
+  inputEmp.value = state.empId;
+  inputEmp.addEventListener("input", function(e) { state.empId = e.target.value.replace(/\D/g, "").slice(0, 7); });
+  fieldEmp.appendChild(inputEmp);
+  wrap.appendChild(fieldEmp);
 
-  const btn = el("button","btn-full","다음 →");
-  btn.style.marginTop="28px";
-  btn.onclick = () => {
-    if (!state.branch.trim()) { err.textContent="지점명을 입력해주세요."; err.style.display="block"; return; }
-    if (!/^\d{7}$/.test(state.empId)) { err.textContent="사번은 숫자 7자리로 입력해주세요."; err.style.display="block"; return; }
-    state.isAdmin = (state.empId === ADMIN_EMP_ID);
-    navigate("main");
-  };
-  screen.appendChild(btn);
-  return screen;
+  var errDiv = el("div", "error");
+  errDiv.id = "input-error";
+  if (state.error) errDiv.textContent = state.error;
+  wrap.appendChild(errDiv);
+
+  var btn = el("button", "btn-full", "다음 →");
+  btn.style.marginTop = "28px";
+  btn.addEventListener("click", function() {
+    if (!state.branch) {
+      state.error = "지점명을 입력하세요";
+      document.getElementById("input-error").textContent = state.error;
+      return;
+    }
+    if (!/^\d{7}$/.test(state.empId)) {
+      state.error = "사번은 숫자 7자리로 입력하세요";
+      document.getElementById("input-error").textContent = state.error;
+      return;
+    }
+    state.error = null;
+    navigate("quiz");
+  });
+  wrap.appendChild(btn);
+
+  return wrap;
 }
 
-// ── 퀴즈 ──────────────────────────────────────────────
+// ─── (buildTimepoint 제거 — URL 파라미터 ?t=pre/post/followup 로 시점 결정) ───
+
+// ─── Screen: Quiz ───────────────────────────────────────────
+
 function buildQuiz() {
-  const isQ5 = state.step === QUESTIONS.length;
-  const screen = el("div","screen");
+  var wrap = el("div", "screen");
+  var step = state.step; // 0~7 (문항 하나씩)
+  var q = QUESTIONS[step];
+  var stgIdx = Math.floor(step / 2);
+  var stg = STAGES[stgIdx];
 
-  // 진행바
-  const progress = ((state.step+1)/TOTAL_STEPS)*100;
-  const stageLabel = isQ5 ? Q5.stage : QUESTIONS[state.step].stage;
-  const pw = el("div","progress-wrap");
-  pw.innerHTML = `
-    <div class="progress-meta">
-      <span class="progress-num">${state.step+1} / ${TOTAL_STEPS}</span>
-      <span class="progress-stage">${stageLabel}</span>
-    </div>
-    <div class="progress-track"><div class="progress-fill" style="width:${progress}%"></div></div>`;
-  screen.appendChild(pw);
-
-  // 스텝 인디케이터
-  const ind = el("div","step-indicator");
-  ind.style.marginBottom = "28px";
-  ["L","I","N","K","✓"].forEach((s, i) => {
-    const dot = el("div","step-dot");
-    if (i < state.step) dot.classList.add("done");
-    else if (i === state.step) dot.classList.add("active");
-    ind.appendChild(dot);
-    if (i < 4) {
-      const line = el("div","step-line");
-      if (i < state.step) line.classList.add("done");
-      ind.appendChild(line);
+  // Back button
+  var back = el("button", "btn-back", "← 이전");
+  back.addEventListener("click", function() {
+    if (state.step > 0) {
+      navigate("quiz", function() { state.step--; }, true);
+    } else {
+      navigate("input", null, true);
     }
   });
-  screen.appendChild(ind);
+  wrap.appendChild(back);
 
-  if (isQ5) {
-    screen.appendChild(el("div","q-text", Q5.text));
-    screen.appendChild(el("p","multi-hint","복수 선택 가능"));
-    const optList = el("div","option-list");
-    Q5.options.forEach((opt, idx) => {
-      const btn = el("button","option-btn");
-      const num = el("div","option-num", opt.stage);
-      num.style.cssText = "font-size:11px;width:auto;padding:0 8px;border-radius:20px;min-width:auto;height:24px;";
-      btn.appendChild(num);
-      btn.appendChild(document.createTextNode(opt.label));
-      if (state.q5selected.includes(opt.value)) btn.classList.add("selected");
-      btn.onclick = () => {
-        if (state.q5selected.includes(opt.value)) {
-          state.q5selected = state.q5selected.filter(v=>v!==opt.value);
-          btn.classList.remove("selected");
-        } else {
-          state.q5selected.push(opt.value);
-          btn.classList.add("selected");
-        }
-      };
-      optList.appendChild(btn);
-    });
-    screen.appendChild(optList);
-    const done = el("button","btn-full","완료");
-    done.style.marginTop="24px";
-    done.onclick = () => {
-      const { key } = getResultKey(state.answers, state.q5selected);
-      state.resultKey = key;
-      saveResponse({ branch:state.branch, empId:state.empId, answers:state.answers, q5:state.q5selected, result:key, timestamp:new Date().toISOString() });
-      navigate("result");
-    };
-    screen.appendChild(done);
-  } else {
-    const q = QUESTIONS[state.step];
-    screen.appendChild(el("div","situation-box", q.situation));
-    screen.appendChild(el("div","q-text", q.text));
-    const optList = el("div","option-list");
-    q.options.forEach((opt, idx) => {
-      const btn = el("button","option-btn");
-      const num = el("div","option-num", idx+1);
-      btn.appendChild(num);
-      btn.appendChild(document.createTextNode(opt.label));
-      btn.onclick = () => {
-        const newA = [...state.answers];
-        newA[state.step] = opt.value;
-        state.answers = newA;
-        navigate("quiz", () => state.step++);
-      };
-      optList.appendChild(btn);
-    });
-    screen.appendChild(optList);
+  // Progress bar
+  var pw = el("div", "progress-wrap");
+  var pm = el("div", "progress-meta");
+  pm.innerHTML = '<span class="progress-num">' + (step + 1) + ' / 8</span>';
+  var badge = el("span", "progress-stage", stg.name + " · " + stg.label);
+  badge.style.color = stg.color;
+  badge.style.background = stg.color + "14";
+  pm.appendChild(badge);
+  pw.appendChild(pm);
+  var pt = el("div", "progress-track");
+  var pf = el("div", "progress-fill");
+  pf.style.width = ((step + 1) / 8 * 100) + "%";
+  pt.appendChild(pf);
+  pw.appendChild(pt);
+  wrap.appendChild(pw);
+
+  // Step indicator dots (L I N K)
+  var indicator = el("div", "step-indicator");
+  for (var si = 0; si < 4; si++) {
+    if (si > 0) {
+      var line = el("div", "step-line" + (si <= stgIdx ? " done" : ""));
+      indicator.appendChild(line);
+    }
+    var dot = el("div", "step-dot" + (si === stgIdx ? " active" : (si < stgIdx ? " done" : "")));
+    indicator.appendChild(dot);
   }
+  wrap.appendChild(indicator);
 
-  const back = el("button","btn-back","← 이전");
-  back.style.marginTop="20px";
-  back.onclick = () => {
-    if (state.step === 0) navigate("main", null, true);
-    else navigate("quiz", () => state.step--, true);
-  };
-  screen.appendChild(back);
-  return screen;
+  // Question text
+  var qText = el("div", "q-text", q.text);
+  wrap.appendChild(qText);
+
+  // 세로 선택지 (5개, 풀너비)
+  var optList = el("div", "option-list");
+  for (var v = 1; v <= 5; v++) {
+    (function(val) {
+      var btn = el("button", "option-btn" + (state.answers[step] === val ? " selected" : ""));
+      var num = el("div", "option-num", String(val));
+      btn.appendChild(num);
+      btn.appendChild(document.createTextNode(SCALE_LABELS[val - 1]));
+      btn.addEventListener("click", function() {
+        state.answers[step] = val;
+        // 선택 후 자동 진행 (짧은 딜레이)
+        var allBtns = optList.querySelectorAll(".option-btn");
+        for (var s = 0; s < allBtns.length; s++) allBtns[s].classList.remove("selected");
+        btn.classList.add("selected");
+        setTimeout(function() {
+          if (step < 7) {
+            navigate("quiz", function() { state.step++; });
+          } else {
+            // 마지막 문항
+            if (state.timepoint === "pre") {
+              submitResponse();
+              navigate("result");
+            } else {
+              navigate("bonus");
+            }
+          }
+        }, 250);
+      });
+      optList.appendChild(btn);
+    })(v);
+  }
+  wrap.appendChild(optList);
+
+  return wrap;
 }
 
-// ── 결과 ──────────────────────────────────────────────
-function buildResult() {
-  const { key, aware } = getResultKey(state.answers, state.q5selected);
-  const r = RESULTS[key];
-  const weak = getWeakStages(state.answers);
-  const screen = el("div","screen");
+// ─── Screen: Bonus ──────────────────────────────────────────
 
-  const header = el("div","result-header");
-  header.innerHTML = `<div class="result-eyebrow">LINK 진단 결과</div><h2>오늘 집중할 구간</h2>`;
-  screen.appendChild(header);
+function buildBonus() {
+  var wrap = el("div", "screen");
 
-  const card = el("div","result-card");
-  const badge = el("div","result-stage-badge", `${r.stage} · ${r.label}`);
-  badge.style.background = r.color;
-  card.appendChild(badge);
-  card.appendChild(el("p","result-msg", r.message.replace(/\n/g,"<br>")));
+  var back = el("button", "btn-back", "← 이전");
+  back.addEventListener("click", function() {
+    navigate("quiz", function() { state.step = 7; }, true);
+  });
+  wrap.appendChild(back);
 
-  if (aware === true && weak.size > 1) {
-    card.appendChild(el("p","result-sub","진단 결과도 같은 단계가 약하게 나왔어요.\n오늘 확실히 채워가세요."));
-  } else if (aware === false) {
-    card.appendChild(el("p","result-sub","오늘 교육에서 이 구간을 집중해서 들어보세요."));
-  } else if (aware === "strong") {
-    card.appendChild(el("p","result-sub","진단 결과는 양호합니다.\n더 잘하고 싶으신 부분을 오늘 깊이 배워가세요."));
-  } else if (aware === "all_good") {
-    card.appendChild(el("p","result-sub","전 단계가 양호합니다.\n오늘 교육으로 더욱 완성도를 높여가세요."));
+  if (state.timepoint === "post") {
+    // Post-education bonus
+    var h = el("h2", null, "교육 피드백");
+    wrap.appendChild(h);
+
+    var sec1 = el("div", "bonus-section");
+    var label1 = el("div", "q-text", "가장 도움된 단계는?");
+    label1.style.fontSize = "18px";
+    sec1.appendChild(label1);
+
+    var opts = el("div", "option-list");
+    STAGES.forEach(function(stg) {
+      var btn = el("button", "option-btn" + (state.bonusStage === stg.id ? " selected" : ""));
+      btn.innerHTML = '<span class="option-num" style="background:' + stg.color + ';color:#fff">' + stg.id + '</span>' + stg.name + " · " + stg.label;
+      btn.addEventListener("click", function() {
+        state.bonusStage = stg.id;
+        var siblings = opts.querySelectorAll(".option-btn");
+        for (var i = 0; i < siblings.length; i++) siblings[i].classList.remove("selected");
+        btn.classList.add("selected");
+      });
+      opts.appendChild(btn);
+    });
+    sec1.appendChild(opts);
+    wrap.appendChild(sec1);
+
+    var sec2 = el("div", "bonus-section");
+    var label2 = el("div", "q-text", "오늘 교육에서 가장 인상 깊었던 것은?");
+    label2.style.fontSize = "18px";
+    sec2.appendChild(label2);
+
+    var ta = el("textarea", "field");
+    ta.placeholder = "자유롭게 적어주세요 (선택)";
+    ta.style.cssText = "width:100%;padding:16px 18px;border:2px solid #E5E7EB;border-radius:12px;font-size:16px;font-family:inherit;min-height:100px;outline:none;resize:vertical;";
+    ta.value = state.comment;
+    ta.addEventListener("input", function(e) { state.comment = e.target.value; });
+    sec2.appendChild(ta);
+    wrap.appendChild(sec2);
+
+  } else if (state.timepoint === "followup") {
+    // Follow-up bonus
+    var h = el("h2", null, "현장 적용 피드백");
+    wrap.appendChild(h);
+
+    var sec1 = el("div", "bonus-section");
+    var label1 = el("div", "q-text", "현장에서 활용해본 것은?");
+    label1.style.fontSize = "18px";
+    sec1.appendChild(label1);
+
+    var checkOpts = el("div", "option-list");
+    BONUS_APPLIED_OPTIONS.forEach(function(opt) {
+      var isChecked = state.bonusApplied.indexOf(opt.id) !== -1;
+      var btn = el("button", "checkbox-btn" + (isChecked ? " checked" : ""), opt.label);
+      btn.addEventListener("click", function() {
+        var idx = state.bonusApplied.indexOf(opt.id);
+        if (idx === -1) {
+          state.bonusApplied.push(opt.id);
+          btn.classList.add("checked");
+        } else {
+          state.bonusApplied.splice(idx, 1);
+          btn.classList.remove("checked");
+        }
+      });
+      checkOpts.appendChild(btn);
+    });
+    sec1.appendChild(checkOpts);
+    wrap.appendChild(sec1);
+
+    var sec2 = el("div", "bonus-section");
+    var label2 = el("div", "q-text", "활용했을 때 고객 반응은?");
+    label2.style.fontSize = "18px";
+    sec2.appendChild(label2);
+
+    var reactionOpts = el("div", "option-list");
+    var reactions = ["긍정적", "보통", "별로"];
+    reactions.forEach(function(r) {
+      var btn = el("button", "option-btn" + (state.bonusReaction === r ? " selected" : ""), r);
+      btn.addEventListener("click", function() {
+        state.bonusReaction = r;
+        var siblings = reactionOpts.querySelectorAll(".option-btn");
+        for (var i = 0; i < siblings.length; i++) siblings[i].classList.remove("selected");
+        btn.classList.add("selected");
+      });
+      reactionOpts.appendChild(btn);
+    });
+    sec2.appendChild(reactionOpts);
+    wrap.appendChild(sec2);
+
+    var sec3 = el("div", "bonus-section");
+    var label3 = el("div", "q-text", "현장에서 적용해보니 어땠나요?");
+    label3.style.fontSize = "18px";
+    sec3.appendChild(label3);
+
+    var ta = el("textarea", "field");
+    ta.placeholder = "자유롭게 적어주세요 (선택)";
+    ta.style.cssText = "width:100%;padding:16px 18px;border:2px solid #E5E7EB;border-radius:12px;font-size:16px;font-family:inherit;min-height:100px;outline:none;resize:vertical;";
+    ta.value = state.comment;
+    ta.addEventListener("input", function(e) { state.comment = e.target.value; });
+    sec3.appendChild(ta);
+    wrap.appendChild(sec3);
   }
-  screen.appendChild(card);
 
-  const summary = el("div","stage-summary");
-  summary.innerHTML = '<div class="summary-title">가장 집중해야 할 단계는?</div>';
-  const boxes = el("div","stage-boxes");
-  ["L","I","N","K"].forEach(s => {
-    const isMain = s === key;
-    const box = el("div","stage-box");
-    const circle = el("div", isMain ? "stage-circle main" : "stage-circle");
-    circle.style.background = isMain ? r.color : "#F5F5F7";
-    const span = el("span","",s);
-    span.style.color = isMain ? "#fff" : "#8B95A5";
-    circle.appendChild(span);
+  var spacer = el("div");
+  spacer.style.flex = "1";
+  spacer.style.minHeight = "24px";
+  wrap.appendChild(spacer);
+
+  var completeBtn = el("button", "btn-full", "완료");
+  completeBtn.addEventListener("click", function() {
+    submitResponse();
+    navigate("result");
+  });
+  wrap.appendChild(completeBtn);
+
+  return wrap;
+}
+
+// ─── Submit Response ────────────────────────────────────────
+
+function submitResponse() {
+  var data = {
+    action: "submit",
+    branch: state.branch,
+    empId: state.empId,
+    timepoint: state.timepoint,
+    answers: state.answers.slice(),
+    bonusStage: state.bonusStage,
+    bonusApplied: state.bonusApplied.slice(),
+    bonusReaction: state.bonusReaction,
+    comment: state.comment,
+    timestamp: new Date().toISOString(),
+  };
+  postData(data);
+}
+
+// ─── Screen: Result ─────────────────────────────────────────
+
+function buildResult() {
+  var wrap = el("div", "screen");
+  var tp = TIMEPOINTS[state.timepoint] || TIMEPOINTS.pre;
+  var resultTitle = RESULT_TITLES[state.timepoint] || RESULT_TITLES.pre;
+
+  var header = el("div", "result-header");
+  var eyebrow = el("div", "result-eyebrow", "LINK 진단 결과");
+  header.appendChild(eyebrow);
+  var h2 = el("h2", null, resultTitle);
+  header.appendChild(h2);
+  wrap.appendChild(header);
+
+  // Radar chart
+  var chartCard = el("div", "chart-card");
+  var chartContainer = el("div", "chart-container");
+  var canvas = el("canvas");
+  canvas.id = "result-radar";
+  chartContainer.appendChild(canvas);
+  chartCard.appendChild(chartContainer);
+  wrap.appendChild(chartCard);
+
+  // Weakest stage (동점 처리)
+  var result = getWeakestStage(state.answers);
+  var wStage = stageInfo(result.primary);
+  var msg = RESULT_MESSAGES[result.primary];
+
+  var card = el("div", "result-card");
+  card.style.borderTop = "4px solid " + wStage.color;
+
+  // 주 결과 뱃지
+  var badge = el("div", "result-stage-badge");
+  badge.style.background = wStage.color;
+  badge.textContent = wStage.name + " · " + wStage.label;
+  card.appendChild(badge);
+
+  var msgDiv = el("div", "result-msg", msg.replace(/\n/g, "<br>"));
+  card.appendChild(msgDiv);
+
+  // 동점인 단계가 2개 이상이면 안내
+  if (result.tied.length > 1) {
+    var tiedNames = result.tied.map(function(id) { return stageInfo(id).name; }).join(", ");
+    var tiedMsg = el("p", "result-sub",
+      tiedNames + " 모두 보완이 필요합니다.<br>" +
+      "LINK 프로세스 순서에 따라<br><strong>" + wStage.name + "</strong>부터 집중해보세요.");
+    card.appendChild(tiedMsg);
+  }
+
+  wrap.appendChild(card);
+
+  // Stage summary boxes
+  var summary = el("div", "stage-summary");
+  var sumTitle = el("div", "summary-title", "단계별 체감 점수");
+  summary.appendChild(sumTitle);
+
+  var boxes = el("div", "stage-boxes");
+  var avgs = getStageAvgs(state.answers);
+  STAGES.forEach(function(stg) {
+    var isPrimary = stg.id === result.primary;
+    var isTied = result.tied.indexOf(stg.id) >= 0;
+    var box = el("div", "stage-box");
+    var circle = el("div", "stage-circle" + (isPrimary ? " main" : ""));
+    circle.style.background = isPrimary ? stg.color : (isTied ? stg.color + "40" : stg.color + "15");
+    var circleLabel = el("span");
+    circleLabel.textContent = avgs[stg.id].toFixed(1);
+    circleLabel.style.color = isPrimary ? "#fff" : stg.color;
+    circle.appendChild(circleLabel);
     box.appendChild(circle);
-    const label = el("div","stage-label", isMain ? "최우선" : "");
-    label.style.color = r.color;
+
+    var label = el("div", "stage-label");
+    label.style.color = stg.color;
+    label.textContent = stg.name;
+    if (isPrimary) label.textContent += " ★";
     box.appendChild(label);
     boxes.appendChild(box);
   });
   summary.appendChild(boxes);
-  screen.appendChild(summary);
+  wrap.appendChild(summary);
 
-  const btn = el("button","btn-secondary","다시 설문 참여하기");
-  btn.onclick = () => navigate("input", () => {
-    state.branch=""; state.empId=""; state.answers=[];
-    state.q5selected=[]; state.step=0; state.resultKey=null; state.isAdmin=false;
+  // Retry button
+  var btn = el("button", "btn-secondary", "다시 진단하기");
+  btn.addEventListener("click", function() {
+    state.answers = new Array(8).fill(0);
+    state.step = 0;
+    state.bonusStage = "";
+    state.bonusApplied = [];
+    state.bonusReaction = "";
+    state.comment = "";
+    state.empId = "";
+    state.branch = "";
+    state.error = null;
+    navigate("cover", null, true);
   });
-  screen.appendChild(btn);
-  return screen;
+  wrap.appendChild(btn);
+
+  return wrap;
 }
 
-// ── 관리자 ──────────────────────────────────────────────
+// ─── Screen: Admin Login ────────────────────────────────────
+
+function buildAdminLogin() {
+  var wrap = el("div", "screen center");
+
+  var h = el("h1", null, "관리자 로그인");
+  wrap.appendChild(h);
+
+  var sub = el("p", "sub", "관리자 사번을 입력하세요");
+  wrap.appendChild(sub);
+
+  var field = el("div", "field");
+  field.innerHTML = '<label>사번</label>';
+  var input = el("input");
+  input.type = "tel";
+  input.placeholder = "사번을 입력하세요";
+  input.value = state.empId;
+  input.addEventListener("input", function(e) { state.empId = e.target.value.trim(); });
+  field.appendChild(input);
+  wrap.appendChild(field);
+
+  var errDiv = el("div", "error");
+  errDiv.id = "admin-error";
+  if (state.error) errDiv.textContent = state.error;
+  wrap.appendChild(errDiv);
+
+  var btn = el("button", "btn-full", "로그인");
+  btn.addEventListener("click", function() {
+    if (ADMIN_IDS.indexOf(state.empId) === -1) {
+      state.error = "관리자 권한이 없는 사번입니다";
+      document.getElementById("admin-error").textContent = state.error;
+      return;
+    }
+    state.error = null;
+    state.loading = true;
+    navigate("admin");
+    fetchAdminData();
+  });
+  wrap.appendChild(btn);
+
+  return wrap;
+}
+
+// ─── Fetch Admin Data ───────────────────────────────────────
+
+function fetchAdminData() {
+  jsonpFetch("getSummary", null, function(data) {
+    state.loading = false;
+    if (data && !data.error) {
+      state.adminData = data;
+    } else {
+      state.adminData = { responses: [], master: [], branches: [] };
+      state.error = data ? data.error : "데이터 로드 실패";
+    }
+    render();
+  });
+}
+
+// ─── Screen: Admin ──────────────────────────────────────────
+
 function buildAdmin() {
-  const screen = el("div","screen");
-  const header = el("div","admin-header");
+  var wrap = el("div", "screen");
 
-  // 로딩 중
-  if (state.adminLoading) {
-    header.innerHTML = `
-      <div>
-        <div style="font-size:12px;font-weight:800;color:#8B95A5;letter-spacing:3px">ADMIN</div>
-        <h2 style="font-size:24px;margin-top:4px">진단 현황</h2>
-      </div>`;
-    screen.appendChild(header);
-    const lw = el("div","loading-wrap");
-    lw.innerHTML = '<div class="spinner"></div><div class="loading-text">데이터 불러오는 중…</div>';
-    screen.appendChild(lw);
-    return screen;
-  }
+  // Header
+  var header = el("div", "admin-header");
+  var left = el("div");
+  left.innerHTML = '<h2>ADMIN</h2><div style="font-size:14px;color:#8B95A5;margin-top:4px">진단 현황 대시보드</div>';
 
-  const data = state.adminData;
-  const total = data.length;
-  const counts = {L:0,I:0,N:0,K:0};
-  data.forEach(d => { if (counts[d.result]!==undefined) counts[d.result]++; });
-  const maxCount = Math.max(...Object.values(counts), 1);
+  var right = el("div");
+  var total = state.adminData && state.adminData.responses ? state.adminData.responses.length : 0;
+  right.innerHTML = '<div class="admin-total">' + total + '</div><div class="admin-total-label">전체 응답</div>';
+  right.style.textAlign = "right";
 
-  header.innerHTML = `
-    <div>
-      <div style="font-size:12px;font-weight:800;color:#8B95A5;letter-spacing:3px">ADMIN</div>
-      <h2 style="font-size:24px;margin-top:4px">진단 현황</h2>
-    </div>
-    <div style="text-align:right">
-      <div class="admin-total">${total}</div>
-      <div class="admin-total-label">총 응답</div>
-    </div>`;
-  screen.appendChild(header);
+  header.appendChild(left);
+  header.appendChild(right);
+  wrap.appendChild(header);
 
-  if (state.adminError) {
-    screen.appendChild(el("div","error-banner","서버 연결 실패 — 로컬 데이터를 표시합니다."));
-  }
-  if (!GAS_URL) {
-    screen.appendChild(el("div","error-banner","GAS_URL 미설정 — 로컬 데이터만 표시됩니다."));
-  }
-
-  const chart = el("div","chart-card");
-  chart.innerHTML = '<div class="chart-title">단계별 병목 분포</div>';
-  ["L","I","N","K"].forEach(s => {
-    const count = counts[s];
-    const pct = total ? Math.round(count/total*100) : 0;
-    const barW = total ? Math.round(count/maxCount*100) : 0;
-    const row = el("div","bar-row");
-    row.innerHTML = `
-      <div class="bar-meta">
-        <span class="bar-label">${s}단계</span>
-        <span class="bar-count">${count}명 (${pct}%)</span>
-      </div>
-      <div class="bar-track"><div class="bar-fill" style="width:${barW}%;background:${STAGE_COLORS[s]}"></div></div>`;
-    chart.appendChild(row);
+  // Tab bar
+  var tabs = el("div", "tab-bar");
+  var tabList = [
+    { id: "overview", label: "전체현황" },
+    { id: "branch", label: "지점별" },
+    { id: "group", label: "그룹분석" },
+    { id: "data", label: "데이터관리" },
+  ];
+  tabList.forEach(function(t) {
+    var tab = el("button", "tab-item" + (state.adminTab === t.id ? " active" : ""), t.label);
+    tab.addEventListener("click", function() {
+      state.adminTab = t.id;
+      render();
+    });
+    tabs.appendChild(tab);
   });
-  screen.appendChild(chart);
+  wrap.appendChild(tabs);
 
-  const csvBtn = el("button","btn-csv","CSV 다운로드");
-  csvBtn.onclick = () => {
-    const hdr = "timestamp,branch,empId,Q1,Q2,Q3,Q4,Q5,result\n";
-    const rows = data.map(d=>`${d.timestamp},${d.branch},${d.empId},${(d.answers||[]).join(",")},${(d.q5||[]).join("|")},${d.result}`).join("\n");
-    const blob = new Blob(["\uFEFF"+hdr+rows],{type:"text/csv;charset=utf-8;"});
-    const a = document.createElement("a");
-    a.href=URL.createObjectURL(blob); a.download="LINK_진단결과.csv"; a.click();
-  };
-  screen.appendChild(csvBtn);
+  // Loading
+  if (state.loading) {
+    var lw = el("div", "loading-wrap");
+    lw.innerHTML = '<div class="spinner"></div><div class="loading-text">데이터 불러오는 중...</div>';
+    wrap.appendChild(lw);
+    return wrap;
+  }
 
-  const refreshBtn = el("button","btn-refresh","새로고침");
-  refreshBtn.onclick = () => { fetchAdminData(); render(); };
-  screen.appendChild(refreshBtn);
+  // Error
+  if (state.error) {
+    var eb = el("div", "error-banner", state.error);
+    wrap.appendChild(eb);
+  }
 
-  const backBtn = el("button","btn-back","← 메인으로");
-  backBtn.style.marginTop="20px";
-  backBtn.onclick = () => navigate("main", null, true);
-  screen.appendChild(backBtn);
-  return screen;
+  // Tab content
+  switch (state.adminTab) {
+    case "overview": buildAdminOverview(wrap); break;
+    case "branch": buildAdminBranch(wrap); break;
+    case "group": buildAdminGroup(wrap); break;
+    case "data": buildAdminData(wrap); break;
+  }
+
+  return wrap;
 }
 
-checkAdmin();
-render();
+// ─── Admin: Overview ────────────────────────────────────────
+
+function buildAdminOverview(wrap) {
+  var data = state.adminData || { responses: [] };
+  var responses = data.responses || [];
+
+  var preCnt = 0, postCnt = 0, fuCnt = 0;
+  responses.forEach(function(r) {
+    if (r.timepoint === "pre") preCnt++;
+    else if (r.timepoint === "post") postCnt++;
+    else if (r.timepoint === "followup") fuCnt++;
+  });
+
+  // Stat cards
+  var cards = el("div", "stat-cards");
+  [
+    { label: "교육 전", num: preCnt, color: "#3B5BDB" },
+    { label: "교육 직후", num: postCnt, color: "#0CA678" },
+    { label: "3~4주 후", num: fuCnt, color: "#E8470A" },
+  ].forEach(function(s) {
+    var card = el("div", "stat-card");
+    card.innerHTML = '<div class="stat-num" style="color:' + s.color + '">' + s.num + '</div><div class="stat-label">' + s.label + '</div>';
+    cards.appendChild(card);
+  });
+  wrap.appendChild(cards);
+
+  // Radar chart: pre/post/followup overlaid
+  var chartCard = el("div", "chart-card");
+  chartCard.innerHTML = '<div class="chart-title">단계별 평균 (시점 비교)</div>';
+  var container = el("div", "chart-container");
+  var canvas = el("canvas");
+  canvas.id = "admin-radar";
+  container.appendChild(canvas);
+  chartCard.appendChild(container);
+  wrap.appendChild(chartCard);
+
+  // Q1~Q8 bar chart (교육 전 기준)
+  var barCard = el("div", "chart-card");
+  barCard.innerHTML = '<div class="chart-title">문항별 평균 (교육 전)</div>';
+  var barContainer = el("div", "chart-container");
+  var barCanvas = el("canvas");
+  barCanvas.id = "admin-qbar";
+  barContainer.appendChild(barCanvas);
+  barCard.appendChild(barContainer);
+  wrap.appendChild(barCard);
+
+  // Bonus stats
+  var postResponses = responses.filter(function(r) { return r.timepoint === "post" && r.bonusStage; });
+  if (postResponses.length > 0) {
+    var bonusCard = el("div", "chart-card");
+    bonusCard.innerHTML = '<div class="chart-title">가장 도움된 단계</div>';
+    var bonusContainer = el("div", "chart-container");
+    var bonusCanvas = el("canvas");
+    bonusCanvas.id = "admin-bonus-doughnut";
+    bonusContainer.appendChild(bonusCanvas);
+    bonusCard.appendChild(bonusContainer);
+    wrap.appendChild(bonusCard);
+  }
+
+  var fuResponses = responses.filter(function(r) { return r.timepoint === "followup" && r.bonusApplied && r.bonusApplied.length > 0; });
+  if (fuResponses.length > 0) {
+    var appliedCard = el("div", "chart-card");
+    appliedCard.innerHTML = '<div class="chart-title">현장 활용 항목</div>';
+    var appliedContainer = el("div", "chart-container");
+    var appliedCanvas = el("canvas");
+    appliedCanvas.id = "admin-applied-bar";
+    appliedContainer.appendChild(appliedCanvas);
+    appliedCard.appendChild(appliedContainer);
+    wrap.appendChild(appliedCard);
+  }
+}
+
+// ─── Admin: Branch ──────────────────────────────────────────
+
+function buildAdminBranch(wrap) {
+  var data = state.adminData || { responses: [] };
+  var responses = data.responses || [];
+
+  // Group by branch
+  var branchMap = {};
+  responses.forEach(function(r) {
+    if (!r.branch) return;
+    if (!branchMap[r.branch]) branchMap[r.branch] = { name: r.branch, fps: {}, pre: [], post: [], followup: [] };
+    branchMap[r.branch].fps[r.empId] = true;
+    if (r.timepoint === "pre") branchMap[r.branch].pre.push(r);
+    else if (r.timepoint === "post") branchMap[r.branch].post.push(r);
+    else if (r.timepoint === "followup") branchMap[r.branch].followup.push(r);
+  });
+
+  var table = el("table", "data-table");
+  table.innerHTML = '<thead><tr><th>지점명</th><th>FP수</th><th>교육전</th><th>직후</th><th>추후</th></tr></thead>';
+  var tbody = el("tbody");
+
+  Object.keys(branchMap).forEach(function(bName) {
+    var b = branchMap[bName];
+    var tr = el("tr");
+    tr.style.cursor = "pointer";
+    tr.innerHTML = '<td>' + bName + '</td><td>' + Object.keys(b.fps).length + '</td><td>' + b.pre.length + '</td><td>' + b.post.length + '</td><td>' + b.followup.length + '</td>';
+    tr.addEventListener("click", function() {
+      state.adminBranch = b;
+      navigate("adminBranchDetail");
+    });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  wrap.appendChild(table);
+
+  if (Object.keys(branchMap).length === 0) {
+    var empty = el("div", "loading-wrap");
+    empty.innerHTML = '<div class="loading-text">응답 데이터가 없습니다</div>';
+    wrap.appendChild(empty);
+  }
+}
+
+// ─── Screen: Admin Branch Detail ────────────────────────────
+
+function buildAdminBranchDetail() {
+  var wrap = el("div", "screen");
+  var b = state.adminBranch;
+
+  var back = el("button", "btn-back", "← 지점 목록");
+  back.addEventListener("click", function() {
+    state.adminTab = "branch";
+    navigate("admin", null, true);
+  });
+  wrap.appendChild(back);
+
+  var h = el("h2", null, b.name);
+  wrap.appendChild(h);
+
+  // Radar chart
+  var chartCard = el("div", "chart-card");
+  chartCard.innerHTML = '<div class="chart-title">단계별 평균 (시점 비교)</div>';
+  var container = el("div", "chart-container");
+  var canvas = el("canvas");
+  canvas.id = "branch-radar";
+  container.appendChild(canvas);
+  chartCard.appendChild(container);
+  wrap.appendChild(chartCard);
+
+  // FP list table
+  var data = state.adminData || { responses: [] };
+  var responses = data.responses || [];
+  var branchResponses = responses.filter(function(r) { return r.branch === b.name; });
+
+  // Group by empId
+  var fpMap = {};
+  branchResponses.forEach(function(r) {
+    if (!fpMap[r.empId]) fpMap[r.empId] = { empId: r.empId, name: r.name || r.empId, pre: false, post: false, followup: false };
+    fpMap[r.empId][r.timepoint] = true;
+    if (r.name) fpMap[r.empId].name = r.name;
+  });
+
+  var table = el("table", "data-table");
+  table.innerHTML = '<thead><tr><th>사번</th><th>이름</th><th>응답상태</th></tr></thead>';
+  var tbody = el("tbody");
+
+  Object.keys(fpMap).forEach(function(eid) {
+    var fp = fpMap[eid];
+    var tr = el("tr");
+    tr.style.cursor = "pointer";
+    var dots = (fp.pre ? "●" : "○") + " " + (fp.post ? "●" : "○") + " " + (fp.followup ? "●" : "○");
+    tr.innerHTML = '<td>' + fp.empId + '</td><td>' + fp.name + '</td><td class="fp-dots">' + dots + '</td>';
+    tr.addEventListener("click", function() {
+      state.adminFP = { empId: fp.empId, name: fp.name, branch: b.name };
+      fetchFPDetail(fp.empId, function() {
+        navigate("adminFPDetail");
+      });
+    });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  wrap.appendChild(table);
+
+  return wrap;
+}
+
+function fetchFPDetail(empId, callback) {
+  // Try to get from existing data first
+  var data = state.adminData || { responses: [] };
+  var responses = data.responses || [];
+  var fpResponses = responses.filter(function(r) { return r.empId === empId; });
+
+  if (fpResponses.length > 0) {
+    state.adminFP = state.adminFP || {};
+    state.adminFP.responses = fpResponses;
+    if (callback) callback();
+    return;
+  }
+
+  // Fetch from server
+  jsonpFetch("getFPDetail", { empId: empId }, function(result) {
+    state.adminFP = state.adminFP || {};
+    state.adminFP.responses = (result && result.responses) ? result.responses : [];
+    if (callback) callback();
+  });
+}
+
+// ─── Screen: Admin FP Detail ────────────────────────────────
+
+function buildAdminFPDetail() {
+  return buildFPDetailScreen("admin");
+}
+
+function buildFPDetailScreen(mode) {
+  var wrap = el("div", "screen");
+  var fp = mode === "admin" ? state.adminFP : state.managerFP;
+
+  var back = el("button", "btn-back", mode === "admin" ? "← 지점 상세" : "← 목록으로");
+  back.addEventListener("click", function() {
+    if (mode === "admin") {
+      navigate("adminBranchDetail", null, true);
+    } else {
+      navigate("manager", null, true);
+    }
+  });
+  wrap.appendChild(back);
+
+  // FP info
+  var info = el("div", "chart-card");
+  var infoHtml = '<div style="font-size:14px;color:#8B95A5;margin-bottom:4px">사번: ' + (fp.empId || "") + '</div>';
+  infoHtml += '<div style="font-size:20px;font-weight:800;color:#1C2B5E;margin-bottom:4px">' + (fp.name || fp.empId) + '</div>';
+  if (fp.branch) infoHtml += '<div style="font-size:14px;color:#8B95A5">' + fp.branch + '</div>';
+  // Master data fields
+  if (fp.grade) infoHtml += '<div style="font-size:13px;color:#8B95A5;margin-top:8px">성적단: ' + fp.grade + ' | 차월: ' + (fp.tenure || '-') + ' | 채널: ' + (fp.channel || '-') + '</div>';
+  info.innerHTML = infoHtml;
+  wrap.appendChild(info);
+
+  // Radar chart
+  var chartCard = el("div", "chart-card");
+  chartCard.innerHTML = '<div class="chart-title">시점별 진단 결과</div>';
+  var container = el("div", "chart-container");
+  var canvas = el("canvas");
+  canvas.id = "fp-radar";
+  container.appendChild(canvas);
+  chartCard.appendChild(container);
+  wrap.appendChild(chartCard);
+
+  // Score table
+  var responses = fp.responses || [];
+  var preR = null, postR = null, fuR = null;
+  responses.forEach(function(r) {
+    if (r.timepoint === "pre") preR = r;
+    else if (r.timepoint === "post") postR = r;
+    else if (r.timepoint === "followup") fuR = r;
+  });
+
+  var scoreCard = el("div", "chart-card");
+  scoreCard.innerHTML = '<div class="chart-title">문항별 점수</div>';
+  var scoreTable = el("table", "data-table");
+  var sHead = '<thead><tr><th>문항</th><th>교육전</th><th>직후</th><th>추후</th></tr></thead>';
+  scoreTable.innerHTML = sHead;
+  var sTbody = el("tbody");
+  for (var qi = 0; qi < 8; qi++) {
+    var tr = el("tr");
+    var preVal = preR && preR.answers ? preR.answers[qi] : "-";
+    var postVal = postR && postR.answers ? postR.answers[qi] : "-";
+    var fuVal = fuR && fuR.answers ? fuR.answers[qi] : "-";
+    tr.innerHTML = '<td>Q' + (qi + 1) + ' (' + QUESTIONS[qi].stage + ')</td><td>' + preVal + '</td><td>' + postVal + '</td><td>' + fuVal + '</td>';
+    sTbody.appendChild(tr);
+  }
+  scoreTable.appendChild(sTbody);
+  scoreCard.appendChild(scoreTable);
+  wrap.appendChild(scoreCard);
+
+  // Comments
+  var comments = [];
+  responses.forEach(function(r) {
+    if (r.comment) comments.push({ tp: r.timepoint, text: r.comment });
+  });
+  if (comments.length > 0) {
+    var cCard = el("div", "chart-card");
+    cCard.innerHTML = '<div class="chart-title">코멘트</div>';
+    comments.forEach(function(c) {
+      var tpLabel = c.tp === "pre" ? "교육 전" : (c.tp === "post" ? "교육 직후" : "3~4주 후");
+      var cDiv = el("div");
+      cDiv.style.cssText = "margin-bottom:12px;padding:12px;background:#F5F5F7;border-radius:8px;";
+      cDiv.innerHTML = '<div style="font-size:12px;font-weight:700;color:#8B95A5;margin-bottom:4px">' + tpLabel + '</div><div style="font-size:15px;color:#374151;line-height:1.6">' + c.text + '</div>';
+      cCard.appendChild(cDiv);
+    });
+    wrap.appendChild(cCard);
+  }
+
+  // Coaching points
+  if (preR && preR.answers) {
+    var coachCard = el("div", "coaching-card");
+    coachCard.innerHTML = '<div class="chart-title">코칭 포인트</div>';
+
+    var preAvgs = getStageAvgs(preR.answers);
+    // Weakest = highest score (most difficult)
+    var weakestResult = getWeakestStage(preR.answers);
+    var weakest = weakestResult.primary;
+    var coachItem1 = el("div", "coaching-item");
+    coachItem1.innerHTML = '<strong>가장 어려워하는 단계:</strong> ' + stageInfo(weakest).name + ' · ' + stageInfo(weakest).label;
+    coachCard.appendChild(coachItem1);
+
+    // Most improved (biggest drop pre→post)
+    if (postR && postR.answers) {
+      var postAvgs = getStageAvgs(postR.answers);
+      var bestImprove = null;
+      var bestDelta = 0;
+      STAGES.forEach(function(stg) {
+        var delta = preAvgs[stg.id] - postAvgs[stg.id];
+        if (delta > bestDelta) { bestDelta = delta; bestImprove = stg; }
+      });
+      if (bestImprove) {
+        var coachItem2 = el("div", "coaching-item");
+        coachItem2.innerHTML = '🟢 <strong>가장 개선된 단계:</strong> ' + bestImprove.name + ' · ' + bestImprove.label + ' (▼' + bestDelta.toFixed(1) + ')';
+        coachCard.appendChild(coachItem2);
+      }
+
+      // Rebounded (increased post→followup)
+      if (fuR && fuR.answers) {
+        var fuAvgs = getStageAvgs(fuR.answers);
+        var rebound = null;
+        var rebDelta = 0;
+        STAGES.forEach(function(stg) {
+          var delta = fuAvgs[stg.id] - postAvgs[stg.id];
+          if (delta > rebDelta) { rebDelta = delta; rebound = stg; }
+        });
+        if (rebound) {
+          var coachItem3 = el("div", "coaching-item");
+          coachItem3.innerHTML = '🟡 <strong>다시 어려워진 단계:</strong> ' + rebound.name + ' · ' + rebound.label + ' (▲' + rebDelta.toFixed(1) + ')';
+          coachCard.appendChild(coachItem3);
+        }
+      }
+    }
+    wrap.appendChild(coachCard);
+  }
+
+  return wrap;
+}
+
+// ─── Admin: Group ───────────────────────────────────────────
+
+function buildAdminGroup(wrap) {
+  var data = state.adminData || {};
+  var master = data.master || [];
+
+  if (master.length === 0) {
+    var msg = el("div", "loading-wrap");
+    msg.innerHTML = '<div class="loading-text">마스터 데이터를 먼저 업로드해주세요</div>';
+    wrap.appendChild(msg);
+    return;
+  }
+
+  var responses = data.responses || [];
+
+  // Build lookup: empId → master info
+  var masterMap = {};
+  master.forEach(function(m) { masterMap[m.empId] = m; });
+
+  // Get pre-responses only for grouping
+  var preResponses = responses.filter(function(r) { return r.timepoint === "pre"; });
+
+  // Group by grade
+  var gradeCard = el("div", "chart-card");
+  gradeCard.innerHTML = '<div class="chart-title">성적단별 평균</div>';
+  var gradeContainer = el("div", "chart-container");
+  var gradeCanvas = el("canvas");
+  gradeCanvas.id = "group-grade";
+  gradeContainer.appendChild(gradeCanvas);
+  gradeCard.appendChild(gradeContainer);
+  wrap.appendChild(gradeCard);
+
+  // Group by tenure
+  var tenureCard = el("div", "chart-card");
+  tenureCard.innerHTML = '<div class="chart-title">차월구간별 평균</div>';
+  var tenureContainer = el("div", "chart-container");
+  var tenureCanvas = el("canvas");
+  tenureCanvas.id = "group-tenure";
+  tenureContainer.appendChild(tenureCanvas);
+  tenureCard.appendChild(tenureContainer);
+  wrap.appendChild(tenureCard);
+
+  // Group by channel
+  var channelCard = el("div", "chart-card");
+  channelCard.innerHTML = '<div class="chart-title">채널별 평균</div>';
+  var channelContainer = el("div", "chart-container");
+  var channelCanvas = el("canvas");
+  channelCanvas.id = "group-channel";
+  channelContainer.appendChild(channelCanvas);
+  channelCard.appendChild(channelContainer);
+  wrap.appendChild(channelCard);
+}
+
+// ─── Admin: Data ────────────────────────────────────────────
+
+function buildAdminData(wrap) {
+  var data = state.adminData || {};
+  var master = data.master || [];
+  var responses = data.responses || [];
+
+  // Master upload section
+  var uploadCard = el("div", "chart-card");
+  uploadCard.innerHTML = '<div class="chart-title">마스터 데이터 관리</div>';
+
+  var statusDiv = el("div");
+  statusDiv.style.cssText = "font-size:14px;color:#8B95A5;margin-bottom:16px;";
+  statusDiv.textContent = "현재 등록: " + master.length + "명";
+  uploadCard.appendChild(statusDiv);
+
+  var uploadZone = el("div", "upload-zone");
+  var fileInput = el("input");
+  fileInput.type = "file";
+  fileInput.accept = ".csv";
+  fileInput.style.cssText = "width:100%;margin-bottom:12px;";
+  uploadZone.appendChild(fileInput);
+
+  var formatNote = el("div");
+  formatNote.style.cssText = "font-size:12px;color:#8B95A5;margin-bottom:12px;line-height:1.6;";
+  formatNote.textContent = 'CSV 형식: empId,name,grade,tenure,age,gender,channel';
+  uploadZone.appendChild(formatNote);
+
+  var uploadBtn = el("button", "btn-primary", "업로드");
+  uploadBtn.style.width = "100%";
+  uploadBtn.addEventListener("click", function() {
+    var file = fileInput.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var text = e.target.result;
+      var lines = text.split("\n");
+      var masterData = [];
+      for (var i = 1; i < lines.length; i++) {
+        var line = lines[i].trim();
+        if (!line) continue;
+        var cols = parseCSVLine(line);
+        if (cols.length >= 2) {
+          masterData.push({
+            empId: cols[0] || "",
+            name: cols[1] || "",
+            grade: cols[2] || "",
+            tenure: cols[3] || "",
+            age: cols[4] || "",
+            gender: cols[5] || "",
+            channel: cols[6] || "",
+          });
+        }
+      }
+      postData({ action: "uploadMaster", master: masterData });
+      statusDiv.textContent = "업로드 완료: " + masterData.length + "명 (서버 반영 대기 중)";
+    };
+    reader.readAsText(file);
+  });
+  uploadZone.appendChild(uploadBtn);
+  uploadCard.appendChild(uploadZone);
+  wrap.appendChild(uploadCard);
+
+  // Export section
+  var exportCard = el("div", "chart-card");
+  exportCard.innerHTML = '<div class="chart-title">데이터 내보내기</div>';
+
+  var exportStatus = el("div");
+  exportStatus.style.cssText = "font-size:14px;color:#8B95A5;margin-bottom:16px;";
+  exportStatus.textContent = "전체 응답: " + responses.length + "건";
+  exportCard.appendChild(exportStatus);
+
+  var csvBtn = el("button", "btn-full", "CSV 다운로드");
+  csvBtn.addEventListener("click", function() {
+    exportCSV(responses);
+  });
+  exportCard.appendChild(csvBtn);
+  wrap.appendChild(exportCard);
+}
+
+function parseCSVLine(line) {
+  var result = [];
+  var current = "";
+  var inQuotes = false;
+  for (var i = 0; i < line.length; i++) {
+    var ch = line[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (i + 1 < line.length && line[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        current += ch;
+      }
+    } else {
+      if (ch === '"') {
+        inQuotes = true;
+      } else if (ch === ",") {
+        result.push(current.trim());
+        current = "";
+      } else {
+        current += ch;
+      }
+    }
+  }
+  result.push(current.trim());
+  return result;
+}
+
+function exportCSV(responses) {
+  var bom = "\uFEFF";
+  var header = "timestamp,branch,empId,timepoint,L1,L2,I1,I2,N1,N2,K1,K2,bonusStage,bonusApplied,bonusReaction,comment";
+  var lines = [header];
+  responses.forEach(function(r) {
+    var ans = r.answers || new Array(8).fill("");
+    var row = [
+      r.timestamp || "",
+      r.branch || "",
+      r.empId || "",
+      r.timepoint || "",
+      ans[0], ans[1], ans[2], ans[3], ans[4], ans[5], ans[6], ans[7],
+      r.bonusStage || "",
+      (r.bonusApplied || []).join(";"),
+      r.bonusReaction || "",
+      '"' + (r.comment || "").replace(/"/g, '""') + '"',
+    ];
+    lines.push(row.join(","));
+  });
+
+  var csvContent = bom + lines.join("\n");
+  var blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.href = url;
+  a.download = "link_responses_" + new Date().toISOString().slice(0, 10) + ".csv";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ─── Screen: Manager Login ──────────────────────────────────
+
+function buildManagerLogin() {
+  var wrap = el("div", "screen center");
+
+  var h = el("h1", null, "지점장 대시보드");
+  wrap.appendChild(h);
+
+  var sub = el("p", "sub", "지점명을 입력하세요");
+  wrap.appendChild(sub);
+
+  var field = el("div", "field");
+  field.innerHTML = '<label>지점명</label>';
+  var input = el("input");
+  input.type = "text";
+  input.placeholder = "지점명을 입력하세요";
+  input.value = state.managerBranch;
+  input.addEventListener("input", function(e) { state.managerBranch = e.target.value.trim(); });
+  field.appendChild(input);
+  wrap.appendChild(field);
+
+  var errDiv = el("div", "error");
+  errDiv.id = "manager-error";
+  if (state.error) errDiv.textContent = state.error;
+  wrap.appendChild(errDiv);
+
+  var btn = el("button", "btn-full", "로그인");
+  btn.addEventListener("click", function() {
+    if (!state.managerBranch) {
+      state.error = "지점명을 입력하세요";
+      document.getElementById("manager-error").textContent = state.error;
+      return;
+    }
+    state.error = null;
+    state.loading = true;
+    navigate("manager");
+    fetchManagerData();
+  });
+  wrap.appendChild(btn);
+
+  return wrap;
+}
+
+function fetchManagerData() {
+  jsonpFetch("getBranchData", { branch: state.managerBranch }, function(data) {
+    state.loading = false;
+    if (data && !data.error) {
+      state.managerData = data;
+    } else {
+      state.managerData = { responses: [] };
+      state.error = data ? data.error : "데이터 로드 실패";
+    }
+    render();
+  });
+}
+
+// ─── Screen: Manager ────────────────────────────────────────
+
+function buildManager() {
+  var wrap = el("div", "screen");
+
+  var back = el("button", "btn-back", "← 로그아웃");
+  back.addEventListener("click", function() {
+    state.managerData = null;
+    navigate("managerLogin", null, true);
+  });
+  wrap.appendChild(back);
+
+  var h = el("h2", null, state.managerBranch);
+  wrap.appendChild(h);
+
+  if (state.loading) {
+    var lw = el("div", "loading-wrap");
+    lw.innerHTML = '<div class="spinner"></div><div class="loading-text">데이터 불러오는 중...</div>';
+    wrap.appendChild(lw);
+    return wrap;
+  }
+
+  if (state.error) {
+    var eb = el("div", "error-banner", state.error);
+    wrap.appendChild(eb);
+  }
+
+  var data = state.managerData || { responses: [] };
+  var responses = data.responses || [];
+
+  var preCnt = 0, postCnt = 0, fuCnt = 0;
+  responses.forEach(function(r) {
+    if (r.timepoint === "pre") preCnt++;
+    else if (r.timepoint === "post") postCnt++;
+    else if (r.timepoint === "followup") fuCnt++;
+  });
+
+  // Stat cards
+  var cards = el("div", "stat-cards");
+  [
+    { label: "교육 전", num: preCnt, color: "#3B5BDB" },
+    { label: "교육 직후", num: postCnt, color: "#0CA678" },
+    { label: "3~4주 후", num: fuCnt, color: "#E8470A" },
+  ].forEach(function(s) {
+    var card = el("div", "stat-card");
+    card.innerHTML = '<div class="stat-num" style="color:' + s.color + '">' + s.num + '</div><div class="stat-label">' + s.label + '</div>';
+    cards.appendChild(card);
+  });
+  wrap.appendChild(cards);
+
+  // Radar chart
+  var chartCard = el("div", "chart-card");
+  chartCard.innerHTML = '<div class="chart-title">단계별 평균 (시점 비교)</div>';
+  var container = el("div", "chart-container");
+  var canvas = el("canvas");
+  canvas.id = "manager-radar";
+  container.appendChild(canvas);
+  chartCard.appendChild(container);
+  wrap.appendChild(chartCard);
+
+  // Search bar
+  var searchBar = el("div", "search-bar");
+  var searchInput = el("input");
+  searchInput.type = "text";
+  searchInput.placeholder = "사번 또는 이름으로 검색";
+  searchInput.addEventListener("input", function(e) {
+    var q = e.target.value.trim().toLowerCase();
+    var items = wrap.querySelectorAll(".fp-item");
+    for (var i = 0; i < items.length; i++) {
+      var text = items[i].textContent.toLowerCase();
+      items[i].style.display = (!q || text.indexOf(q) !== -1) ? "" : "none";
+    }
+  });
+  searchBar.appendChild(searchInput);
+  wrap.appendChild(searchBar);
+
+  // FP list
+  var fpMap = {};
+  responses.forEach(function(r) {
+    if (!fpMap[r.empId]) fpMap[r.empId] = { empId: r.empId, name: r.name || r.empId, pre: false, post: false, followup: false };
+    fpMap[r.empId][r.timepoint] = true;
+    if (r.name) fpMap[r.empId].name = r.name;
+  });
+
+  Object.keys(fpMap).forEach(function(eid) {
+    var fp = fpMap[eid];
+    var item = el("div", "fp-item");
+    var dots = (fp.pre ? "●" : "○") + " " + (fp.post ? "●" : "○") + " " + (fp.followup ? "●" : "○");
+    item.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:700;color:#1C2B5E">' + fp.name + '</div><div style="font-size:13px;color:#8B95A5">' + fp.empId + '</div></div><div class="fp-dots">' + dots + '</div></div>';
+    item.addEventListener("click", function() {
+      state.managerFP = { empId: fp.empId, name: fp.name, branch: state.managerBranch };
+      // Get FP responses from manager data
+      state.managerFP.responses = responses.filter(function(r) { return r.empId === fp.empId; });
+      navigate("managerFP");
+    });
+    wrap.appendChild(item);
+  });
+
+  if (Object.keys(fpMap).length === 0) {
+    var empty = el("div", "loading-wrap");
+    empty.innerHTML = '<div class="loading-text">아직 응답이 없습니다</div>';
+    wrap.appendChild(empty);
+  }
+
+  return wrap;
+}
+
+// ─── Screen: Manager FP ─────────────────────────────────────
+
+function buildManagerFP() {
+  return buildFPDetailScreen("manager");
+}
+
+// ─── Chart Rendering ────────────────────────────────────────
+
+function renderCharts() {
+  if (typeof Chart === "undefined") return;
+
+  switch (state.screen) {
+    case "result":
+      renderResultRadar();
+      break;
+    case "admin":
+      if (state.adminTab === "overview") renderAdminOverviewCharts();
+      if (state.adminTab === "group") renderAdminGroupCharts();
+      break;
+    case "adminBranchDetail":
+      renderTimepointRadar("branch-radar", getBranchTimepointData(state.adminBranch));
+      break;
+    case "adminFPDetail":
+      renderTimepointRadar("fp-radar", getFPTimepointData(state.adminFP));
+      break;
+    case "manager":
+      renderTimepointRadar("manager-radar", getManagerTimepointData());
+      break;
+    case "managerFP":
+      renderTimepointRadar("fp-radar", getFPTimepointData(state.managerFP));
+      break;
+  }
+}
+
+function renderResultRadar() {
+  var canvas = document.getElementById("result-radar");
+  if (!canvas) return;
+
+  var avgs = getStageAvgs(state.answers);
+  // INVERT: display (6 - score)
+  var values = STAGES.map(function(stg) { return 6 - avgs[stg.id]; });
+
+  var chart = new Chart(canvas, {
+    type: "radar",
+    data: {
+      labels: STAGES.map(function(s) { return s.name + " " + s.label; }),
+      datasets: [{
+        label: "역량 수준",
+        data: values,
+        backgroundColor: "rgba(232, 71, 10, 0.15)",
+        borderColor: "#E8470A",
+        borderWidth: 2,
+        pointBackgroundColor: "#E8470A",
+        pointRadius: 5,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      scales: {
+        r: {
+          min: 0,
+          max: 5,
+          ticks: { stepSize: 1, display: false },
+          pointLabels: { font: { size: 13, weight: "bold" } },
+          grid: { color: "rgba(0,0,0,0.06)" },
+        },
+      },
+      plugins: {
+        legend: { display: false },
+      },
+    },
+  });
+  state._charts["result-radar"] = chart;
+}
+
+function renderTimepointRadar(canvasId, tpData) {
+  var canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+
+  var datasets = [];
+  var tpConfigs = [
+    { key: "pre", label: "교육 전", color: "#3B5BDB", opacity: 0.8 },
+    { key: "post", label: "교육 직후", color: "#0CA678", opacity: 0.6 },
+    { key: "followup", label: "3~4주 후", color: "#E8470A", opacity: 0.4 },
+  ];
+
+  tpConfigs.forEach(function(tc) {
+    if (tpData[tc.key]) {
+      // INVERT: display (6 - avg)
+      var values = STAGES.map(function(stg) { return 6 - (tpData[tc.key][stg.id] || 0); });
+      datasets.push({
+        label: tc.label,
+        data: values,
+        backgroundColor: tc.color + Math.round(tc.opacity * 40).toString(16).padStart(2, "0"),
+        borderColor: tc.color,
+        borderWidth: 2,
+        pointBackgroundColor: tc.color,
+        pointRadius: 4,
+      });
+    }
+  });
+
+  if (datasets.length === 0) return;
+
+  var chart = new Chart(canvas, {
+    type: "radar",
+    data: {
+      labels: STAGES.map(function(s) { return s.name + " " + s.label; }),
+      datasets: datasets,
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      scales: {
+        r: {
+          min: 0,
+          max: 5,
+          ticks: { stepSize: 1, display: false },
+          pointLabels: { font: { size: 13, weight: "bold" } },
+          grid: { color: "rgba(0,0,0,0.06)" },
+        },
+      },
+      plugins: {
+        legend: { position: "bottom", labels: { font: { size: 12 } } },
+      },
+    },
+  });
+  state._charts[canvasId] = chart;
+}
+
+function renderAdminOverviewCharts() {
+  var data = state.adminData || { responses: [] };
+  var responses = data.responses || [];
+
+  // Radar chart: pre/post/followup
+  var tpData = computeTimepointAverages(responses);
+  renderTimepointRadar("admin-radar", tpData);
+
+  // Q bar chart (pre only)
+  var preResponses = responses.filter(function(r) { return r.timepoint === "pre"; });
+  var canvas = document.getElementById("admin-qbar");
+  if (canvas && preResponses.length > 0) {
+    var qAvgs = [];
+    for (var qi = 0; qi < 8; qi++) {
+      var sum = 0, cnt = 0;
+      preResponses.forEach(function(r) {
+        if (r.answers && r.answers[qi]) { sum += r.answers[qi]; cnt++; }
+      });
+      qAvgs.push(cnt > 0 ? sum / cnt : 0);
+    }
+
+    var qLabels = QUESTIONS.map(function(q, i) { return "Q" + (i + 1) + " (" + q.stage + ")"; });
+
+    var chart = new Chart(canvas, {
+      type: "bar",
+      data: {
+        labels: qLabels,
+        datasets: [{
+          data: qAvgs,
+          backgroundColor: QUESTIONS.map(function(q) { return STAGE_COLORS[q.stage] + "AA"; }),
+          borderRadius: 6,
+        }],
+      },
+      options: {
+        indexAxis: "y",
+        responsive: true,
+        maintainAspectRatio: true,
+        scales: {
+          x: { min: 0, max: 5, ticks: { stepSize: 1 } },
+          y: { grid: { display: false } },
+        },
+        plugins: { legend: { display: false } },
+      },
+    });
+    state._charts["admin-qbar"] = chart;
+  }
+
+  // Bonus doughnut
+  var bonusCanvas = document.getElementById("admin-bonus-doughnut");
+  if (bonusCanvas) {
+    var bonusCounts = { L: 0, I: 0, N: 0, K: 0 };
+    responses.forEach(function(r) {
+      if (r.timepoint === "post" && r.bonusStage && bonusCounts.hasOwnProperty(r.bonusStage)) {
+        bonusCounts[r.bonusStage]++;
+      }
+    });
+
+    var chart = new Chart(bonusCanvas, {
+      type: "doughnut",
+      data: {
+        labels: STAGES.map(function(s) { return s.name + " " + s.label; }),
+        datasets: [{
+          data: STAGES.map(function(s) { return bonusCounts[s.id]; }),
+          backgroundColor: STAGES.map(function(s) { return s.color; }),
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+          legend: { position: "bottom", labels: { font: { size: 12 } } },
+        },
+      },
+    });
+    state._charts["admin-bonus-doughnut"] = chart;
+  }
+
+  // Applied bar
+  var appliedCanvas = document.getElementById("admin-applied-bar");
+  if (appliedCanvas) {
+    var appliedCounts = {};
+    BONUS_APPLIED_OPTIONS.forEach(function(o) { appliedCounts[o.id] = 0; });
+    responses.forEach(function(r) {
+      if (r.timepoint === "followup" && r.bonusApplied) {
+        r.bonusApplied.forEach(function(a) {
+          if (appliedCounts.hasOwnProperty(a)) appliedCounts[a]++;
+        });
+      }
+    });
+
+    var chart = new Chart(appliedCanvas, {
+      type: "bar",
+      data: {
+        labels: BONUS_APPLIED_OPTIONS.map(function(o) { return o.label; }),
+        datasets: [{
+          data: BONUS_APPLIED_OPTIONS.map(function(o) { return appliedCounts[o.id]; }),
+          backgroundColor: "#E8470AAA",
+          borderRadius: 6,
+        }],
+      },
+      options: {
+        indexAxis: "y",
+        responsive: true,
+        maintainAspectRatio: true,
+        scales: {
+          x: { ticks: { stepSize: 1 } },
+          y: { grid: { display: false } },
+        },
+        plugins: { legend: { display: false } },
+      },
+    });
+    state._charts["admin-applied-bar"] = chart;
+  }
+}
+
+function renderAdminGroupCharts() {
+  var data = state.adminData || {};
+  var master = data.master || [];
+  var responses = data.responses || [];
+
+  if (master.length === 0) return;
+
+  var masterMap = {};
+  master.forEach(function(m) { masterMap[m.empId] = m; });
+
+  var preResponses = responses.filter(function(r) { return r.timepoint === "pre"; });
+
+  // Helper: group responses by field and render grouped bar chart
+  function renderGroupedBar(canvasId, fieldName, bucketFn) {
+    var canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+
+    var groups = {};
+    preResponses.forEach(function(r) {
+      var m = masterMap[r.empId];
+      if (!m) return;
+      var key = bucketFn ? bucketFn(m[fieldName]) : (m[fieldName] || "기타");
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(r);
+    });
+
+    var groupNames = Object.keys(groups).sort();
+    if (groupNames.length === 0) return;
+
+    var datasets = STAGES.map(function(stg, si) {
+      return {
+        label: stg.name + " " + stg.label,
+        data: groupNames.map(function(gn) {
+          var resps = groups[gn];
+          var sum = 0, cnt = 0;
+          resps.forEach(function(r) {
+            if (r.answers) {
+              sum += (r.answers[si * 2] || 0) + (r.answers[si * 2 + 1] || 0);
+              cnt += 2;
+            }
+          });
+          return cnt > 0 ? sum / cnt : 0;
+        }),
+        backgroundColor: stg.color + "CC",
+        borderRadius: 4,
+      };
+    });
+
+    var chart = new Chart(canvas, {
+      type: "bar",
+      data: { labels: groupNames, datasets: datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        scales: {
+          y: { min: 0, max: 5, ticks: { stepSize: 1 } },
+        },
+        plugins: {
+          legend: { position: "bottom", labels: { font: { size: 11 } } },
+        },
+      },
+    });
+    state._charts[canvasId] = chart;
+  }
+
+  renderGroupedBar("group-grade", "grade");
+  renderGroupedBar("group-tenure", "tenure", function(val) {
+    var n = parseInt(val, 10);
+    if (isNaN(n)) return "기타";
+    if (n <= 12) return "~12개월";
+    if (n <= 24) return "13~24개월";
+    if (n <= 36) return "25~36개월";
+    return "37개월~";
+  });
+  renderGroupedBar("group-channel", "channel");
+}
+
+// ─── Chart Data Helpers ─────────────────────────────────────
+
+function computeTimepointAverages(responses) {
+  var result = {};
+  ["pre", "post", "followup"].forEach(function(tp) {
+    var tpResps = responses.filter(function(r) { return r.timepoint === tp; });
+    if (tpResps.length === 0) return;
+    var avgs = {};
+    STAGES.forEach(function(stg, si) {
+      var sum = 0, cnt = 0;
+      tpResps.forEach(function(r) {
+        if (r.answers) {
+          sum += (r.answers[si * 2] || 0) + (r.answers[si * 2 + 1] || 0);
+          cnt += 2;
+        }
+      });
+      avgs[stg.id] = cnt > 0 ? sum / cnt : 0;
+    });
+    result[tp] = avgs;
+  });
+  return result;
+}
+
+function getBranchTimepointData(branch) {
+  var data = state.adminData || { responses: [] };
+  var responses = (data.responses || []).filter(function(r) { return r.branch === branch.name; });
+  return computeTimepointAverages(responses);
+}
+
+function getFPTimepointData(fp) {
+  var responses = fp.responses || [];
+  var result = {};
+  responses.forEach(function(r) {
+    if (r.answers) {
+      result[r.timepoint] = getStageAvgs(r.answers);
+    }
+  });
+  return result;
+}
+
+function getManagerTimepointData() {
+  var data = state.managerData || { responses: [] };
+  return computeTimepointAverages(data.responses || []);
+}
+
+// ─── Initialization ─────────────────────────────────────────
+
+(function init() {
+  var params = new URLSearchParams(window.location.search);
+  if (params.has("admin")) {
+    state.mode = "admin";
+    state.screen = "adminLogin";
+  } else if (params.has("manager")) {
+    state.mode = "manager";
+    state.screen = "managerLogin";
+  } else {
+    state.mode = "fp";
+    // ?t=pre / ?t=post / ?t=followup 로 시점 결정 (기본값: pre)
+    var t = params.get("t") || "pre";
+    if (!TIMEPOINTS[t]) t = "pre";
+    state.timepoint = t;
+    state.screen = "cover";
+  }
+  render();
+})();
