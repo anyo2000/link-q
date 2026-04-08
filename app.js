@@ -745,8 +745,31 @@ function buildAdminBranchSearch() {
     return wrap;
   }
 
+  if (state.error) {
+    var eb = el("div", "error-banner", "데이터 로드 실패: " + state.error);
+    wrap.appendChild(eb);
+  }
+
   var data = state.adminData || { responses: [] };
   var responses = data.responses || [];
+
+  // 디버그: 받은 응답 수 표시
+  var debug = el("div", "search-debug");
+  debug.style.cssText = "font-size:11px;color:#9CA3AF;text-align:center;margin-bottom:12px;";
+  debug.textContent = "서버 응답: " + responses.length + "건";
+  wrap.appendChild(debug);
+
+  // 새로고침 버튼
+  var refreshBtn = el("button", "btn-mini", "🔄 데이터 새로고침");
+  refreshBtn.style.cssText = "display:block;margin:0 auto 16px;";
+  refreshBtn.addEventListener("click", function() {
+    state.loading = true;
+    state.error = null;
+    state.adminData = null;
+    render();
+    fetchAdminData();
+  });
+  wrap.appendChild(refreshBtn);
 
   // 지점별 그룹화
   var branchMap = {};
