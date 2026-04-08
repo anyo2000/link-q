@@ -898,10 +898,50 @@ function buildAdminBranch(wrap) {
 
 // ─── Screen: Admin Branch Detail ────────────────────────────
 
+function difficultyLabel(score) {
+  if (score >= 4.5) return { label: "매우어려움", color: "#C92A2A" };
+  if (score >= 3.5) return { label: "어려움",     color: "#E8470A" };
+  if (score >= 2.5) return { label: "보통",       color: "#FAB005" };
+  if (score >= 1.5) return { label: "수월",       color: "#0CA678" };
+  return                  { label: "매우수월",    color: "#0CA678" };
+}
+
+function avgStageScore(fps, tp) {
+  var sums = { L: 0, I: 0, N: 0, K: 0 };
+  var cnt = 0;
+  fps.forEach(function(f) {
+    var r = f[tp];
+    if (!r || !r.answers) return;
+    var s = getStageAvgs(r.answers);
+    sums.L += s.L; sums.I += s.I; sums.N += s.N; sums.K += s.K;
+    cnt++;
+  });
+  if (cnt === 0) return null;
+  return { L: sums.L / cnt, I: sums.I / cnt, N: sums.N / cnt, K: sums.K / cnt, count: cnt };
+}
+
+function totalAvg(s) { return (s.L + s.I + s.N + s.K) / 4; }
+
 function buildAdminBranchDetail() {
   var wrap = el("div", "screen");
   var b = state.adminBranch;
+  var data = state.adminData || { responses: [] };
+  var allResp = (data.responses || []).filter(function(r) { return r.branch === b.name; });
 
+  // Group by FP
+  var fpMap = {};
+  allResp.forEach(function(r) {
+    if (!fpMap[r.empId]) fpMap[r.empId] = { empId: r.empId, name: r.name || r.empId, pre: null, post: null, followup: null };
+    fpMap[r.empId][r.timepoint] = r;
+    if (r.name) fpMap[r.empId].name = r.name;
+  });
+  var fps = Object.keys(fpMap).map(function(k) { return fpMap[k]; });
+  var totalFPs = fps.length;
+  var preCnt  = fps.filter(function(f) { return f.pre;      }).length;
+  var postCnt = fps.filter(function(f) { return f.post;     }).length;
+  var fuCnt   = fps.filter(function(f) { return f.followup; }).length;
+
+  // Back
   var back = el("button", "btn-back", "← 지점 목록");
   back.addEventListener("click", function() {
     state.adminTab = "branch";
@@ -909,38 +949,86 @@ function buildAdminBranchDetail() {
   });
   wrap.appendChild(back);
 
-  var h = el("h2", null, b.name);
-  wrap.appendChild(h);
+  // Report header
+  var header = el("div", "report-header");
+  header.innerHTML = '<div class="report-eyebrow">LINK 교육 효과 분석</div>'
+    + '<div class="report-title">' + b.name + ' 종합 리포트</div>';
+  wrap.appendChild(header);
 
-  // Radar chart
-  var chartCard = el("div", "chart-card");
-  chartCard.innerHTML = '<div class="chart-title">단계별 평균 (시점 비교)</div>';
-  var container = el("div", "chart-container");
-  var canvas = el("canvas");
-  canvas.id = "branch-radar";
-  container.appendChild(canvas);
-  chartCard.appendChild(container);
-  wrap.appendChild(chartCard);
-
-  // FP list table
-  var data = state.adminData || { responses: [] };
-  var responses = data.responses || [];
-  var branchResponses = responses.filter(function(r) { return r.branch === b.name; });
-
-  // Group by empId
-  var fpMap = {};
-  branchResponses.forEach(function(r) {
-    if (!fpMap[r.empId]) fpMap[r.empId] = { empId: r.empId, name: r.name || r.empId, pre: false, post: false, followup: false };
-    fpMap[r.empId][r.timepoint] = true;
-    if (r.name) fpMap[r.empId].name = r.name;
+  // ── 참여 현황 ────────────────────────────────────────
+  var partCard = el("div", "chart-card");
+  partCard.appendChild(el("div", "section-title", "참여 현황"));
+  var stats = el("div", "stat-grid");
+  [
+    { num: totalFPs, label: "전체 FP", color: "#1C2B5E" },
+    { num: preCnt,   label: "교육 전",  color: "#3B5BDB" },
+    { num: postCnt,  label: "교육 직후", color: "#0CA678" },
+    { num: fuCnt,    label: "3~4주 후", color: "#E8470A" },
+  ].forEach(function(s) {
+    var box = el("div", "stat-box");
+    var n = el("div", "stat-num", String(s.num));
+    n.style.color = s.color;
+    box.appendChild(n);
+    box.appendChild(el("div", "stat-label", s.label));
+    stats.appendChild(box);
   });
+  partCard.appendChild(stats);
 
+  var prog = el("div");
+  prog.style.marginTop = "20px";
+  [
+    { label: "교육 전",  count: preCnt,  color: "#3B5BDB" },
+    { label: "직후",     count: postCnt, color: "#0CA678" },
+    { label: "3~4주 후", count: fuCnt,   color: "#E8470A" },
+  ].forEach(function(p) {
+    var pct = totalFPs > 0 ? Math.round(p.count / totalFPs * 100) : 0;
+    var row = el("div", "bar-row");
+    var meta = el("div", "bar-meta");
+    meta.innerHTML = '<span class="bar-label">' + p.label + '</span>'
+      + '<span class="bar-count" style="color:' + p.color + ';font-weight:700">' + pct + '%</span>';
+    row.appendChild(meta);
+    var track = el("div", "bar-track");
+    var fill = el("div", "bar-fill");
+    fill.style.cssText = "width:" + pct + "%;background:" + p.color;
+    track.appendChild(fill);
+    row.appendChild(track);
+    prog.appendChild(row);
+  });
+  partCard.appendChild(prog);
+  wrap.appendChild(partCard);
+
+  // ── 지점 단계별 역량 변화 (Radar) ────────────────────
+  var radarCard = el("div", "chart-card");
+  radarCard.appendChild(el("div", "section-title", "지점 단계별 역량 변화"));
+  var rContainer = el("div", "chart-container");
+  var rCanvas = el("canvas");
+  rCanvas.id = "branch-radar";
+  rContainer.appendChild(rCanvas);
+  radarCard.appendChild(rContainer);
+  wrap.appendChild(radarCard);
+
+  // ── 1차 진단 결과 ────────────────────────────────────
+  var preFps = fps.filter(function(f) { return f.pre; });
+  if (preFps.length > 0) wrap.appendChild(buildPreReport(b, preFps));
+
+  // ── 2차 진단 결과 ────────────────────────────────────
+  var bothFps = fps.filter(function(f) { return f.pre && f.post; });
+  if (bothFps.length > 0) wrap.appendChild(buildPostReport(bothFps));
+
+  // ── 3차 진단 결과 ────────────────────────────────────
+  var allFps = fps.filter(function(f) { return f.pre && f.post && f.followup; });
+  if (allFps.length > 0) wrap.appendChild(buildFollowupReport(allFps));
+
+  // ── FP 그룹 분류 ─────────────────────────────────────
+  if (allFps.length > 0) wrap.appendChild(buildFpGroups(allFps));
+
+  // ── FP 개별 목록 ─────────────────────────────────────
+  var listCard = el("div", "chart-card");
+  listCard.appendChild(el("div", "section-title", "개별 FP"));
   var table = el("table", "data-table");
-  table.innerHTML = '<thead><tr><th>사번</th><th>이름</th><th>응답상태</th></tr></thead>';
+  table.innerHTML = '<thead><tr><th>사번</th><th>이름</th><th>진행</th></tr></thead>';
   var tbody = el("tbody");
-
-  Object.keys(fpMap).forEach(function(eid) {
-    var fp = fpMap[eid];
+  fps.forEach(function(fp) {
     var tr = el("tr");
     tr.style.cursor = "pointer";
     var dots = (fp.pre ? "●" : "○") + " " + (fp.post ? "●" : "○") + " " + (fp.followup ? "●" : "○");
@@ -954,9 +1042,271 @@ function buildAdminBranchDetail() {
     tbody.appendChild(tr);
   });
   table.appendChild(tbody);
-  wrap.appendChild(table);
+  listCard.appendChild(table);
+  wrap.appendChild(listCard);
 
   return wrap;
+}
+
+// ─── Branch Report Sub-sections ─────────────────────────────
+
+function buildPreReport(b, preFps) {
+  var card = el("div", "chart-card report-section");
+  var head = el("div", "report-step-head");
+  head.innerHTML = '<span class="step-num" style="background:#3B5BDB">1</span>'
+    + '<span class="step-title">1차 진단 결과</span>'
+    + '<span class="step-tag" style="background:#3B5BDB14;color:#3B5BDB">교육 전</span>';
+  card.appendChild(head);
+
+  var note = el("div", "report-note");
+  note.innerHTML = 'FP들이 느끼는 난이도<br><span style="color:#3B5BDB">1 수월</span> ━━━━━━━━ <span style="color:#C92A2A">5 매우 어려움</span>';
+  card.appendChild(note);
+
+  var avgs = avgStageScore(preFps, "pre");
+
+  card.appendChild(el("div", "subsection-title", "단계별 난이도 (지점 평균)"));
+  STAGES.forEach(function(stg) {
+    var score = avgs[stg.id];
+    var diff = difficultyLabel(score);
+    var row = el("div", "bar-row");
+    var meta = el("div", "bar-meta");
+    var emph = score >= 3.5 ? ' !' : '';
+    meta.innerHTML = '<span class="bar-label" style="color:' + stg.color + '">' + stg.id + ' ' + stg.label + '</span>'
+      + '<span class="bar-count" style="color:' + diff.color + ';font-weight:700">' + diff.label + emph + '</span>';
+    row.appendChild(meta);
+    var track = el("div", "bar-track");
+    var fill = el("div", "bar-fill");
+    fill.style.cssText = "width:" + (score / 5 * 100) + "%;background:" + diff.color;
+    track.appendChild(fill);
+    row.appendChild(track);
+    card.appendChild(row);
+  });
+
+  card.appendChild(el("div", "subsection-title", '"가장 어렵다" 응답 분포 (FP별 최약점)'));
+  var weakCount = { L: 0, I: 0, N: 0, K: 0 };
+  preFps.forEach(function(f) {
+    var w = getWeakestStage(f.pre.answers);
+    weakCount[w.primary]++;
+  });
+  var maxCount = Math.max(weakCount.L, weakCount.I, weakCount.N, weakCount.K);
+  STAGES.forEach(function(stg) {
+    var c = weakCount[stg.id];
+    var pct = preFps.length > 0 ? Math.round(c / preFps.length * 100) : 0;
+    var isMax = c === maxCount && c > 0;
+    var row = el("div", "bar-row");
+    var meta = el("div", "bar-meta");
+    meta.innerHTML = '<span class="bar-label" style="color:' + stg.color + '">' + stg.id + ' ' + stg.label + '</span>'
+      + '<span class="bar-count">' + c + '명 (' + pct + '%)' + (isMax ? ' <b style="color:' + stg.color + '">최다</b>' : '') + '</span>';
+    row.appendChild(meta);
+    var track = el("div", "bar-track");
+    var fill = el("div", "bar-fill");
+    fill.style.cssText = "width:" + pct + "%;background:" + stg.color + (isMax ? '' : '66');
+    track.appendChild(fill);
+    row.appendChild(track);
+    card.appendChild(row);
+  });
+
+  // 자동 해석
+  var hardestStg = STAGES.reduce(function(best, s) { return avgs[s.id] > avgs[best.id] ? s : best; });
+  var easiestStg = STAGES.reduce(function(best, s) { return avgs[s.id] < avgs[best.id] ? s : best; });
+  var topWeakStg = STAGES.reduce(function(best, s) { return weakCount[s.id] > weakCount[best.id] ? s : best; });
+  var topWeakPct = preFps.length > 0 ? Math.round(weakCount[topWeakStg.id] / preFps.length * 100) : 0;
+
+  var insight = el("div", "insight-box");
+  insight.innerHTML = b.name + ' FP들은 <b style="color:' + hardestStg.color + '">' + hardestStg.id + '단계(' + hardestStg.label + ')</b>를 가장 어려워합니다 (<b style="color:' + difficultyLabel(avgs[hardestStg.id]).color + '">' + difficultyLabel(avgs[hardestStg.id]).label + '</b>). '
+    + preFps.length + '명 중 <b>' + weakCount[topWeakStg.id] + '명(' + topWeakPct + '%)</b>이 <b style="color:' + topWeakStg.color + '">' + topWeakStg.id + '단계</b>를 가장 어려운 단계로 꼽았습니다. '
+    + '반면 <b style="color:' + easiestStg.color + '">' + easiestStg.id + '단계(' + easiestStg.label + ')</b>은 상대적으로 자신있는 단계입니다 (<b style="color:' + difficultyLabel(avgs[easiestStg.id]).color + '">' + difficultyLabel(avgs[easiestStg.id]).label + '</b>).';
+  card.appendChild(insight);
+
+  return card;
+}
+
+function buildPostReport(bothFps) {
+  var card = el("div", "chart-card report-section");
+  var head = el("div", "report-step-head");
+  head.innerHTML = '<span class="step-num" style="background:#0CA678">2</span>'
+    + '<span class="step-title">2차 진단 결과</span>'
+    + '<span class="step-tag" style="background:#0CA67814;color:#0CA678">교육 직후</span>';
+  card.appendChild(head);
+
+  card.appendChild(el("div", "report-note", "교육 전후 난이도 변화 (점수가 낮아질수록 개선)"));
+
+  var preAvg  = avgStageScore(bothFps, "pre");
+  var postAvg = avgStageScore(bothFps, "post");
+
+  card.appendChild(el("div", "subsection-title", "단계별 변화 (교육 전 → 직후)"));
+  STAGES.forEach(function(stg) {
+    var preLbl  = difficultyLabel(preAvg[stg.id]);
+    var postLbl = difficultyLabel(postAvg[stg.id]);
+    var improved = postAvg[stg.id] < preAvg[stg.id] - 0.1;
+    var row = el("div", "change-row");
+    row.innerHTML = '<span class="change-stage" style="color:' + stg.color + '">' + stg.id + ' ' + stg.label + '</span>'
+      + '<span class="change-from" style="color:' + preLbl.color  + '">' + preLbl.label  + '</span>'
+      + '<span class="change-arrow">→</span>'
+      + '<span class="change-to"   style="color:' + postLbl.color + '">' + postLbl.label + '</span>'
+      + '<span class="change-tag"  style="color:' + (improved ? "#0CA678" : "#9CA3AF") + '">' + (improved ? "개선" : "유지") + '</span>';
+    card.appendChild(row);
+  });
+
+  // 전체 난이도 변화
+  var preTotal  = totalAvg(preAvg);
+  var postTotal = totalAvg(postAvg);
+  var preLbl  = difficultyLabel(preTotal);
+  var postLbl = difficultyLabel(postTotal);
+  var totalImproved = postTotal < preTotal - 0.1;
+
+  var totalBox = el("div", "total-change-box");
+  totalBox.innerHTML = '<div class="total-change-label">전체 난이도 변화</div>'
+    + '<div class="total-change-row">'
+    +   '<div class="total-change-side"><div class="total-change-val" style="color:' + preLbl.color  + '">' + preLbl.label  + '</div><div class="total-change-cap">교육 전</div></div>'
+    +   '<div class="total-change-arrow">→</div>'
+    +   '<div class="total-change-side"><div class="total-change-val" style="color:' + postLbl.color + '">' + postLbl.label + '</div><div class="total-change-cap">교육 직후</div></div>'
+    + '</div>'
+    + '<div class="total-change-tag" style="color:' + (totalImproved ? "#0CA678" : "#9CA3AF") + '">' + (totalImproved ? "난이도 감소 (개선)" : "변화 없음") + '</div>';
+  card.appendChild(totalBox);
+
+  // 개선 현황 split bar
+  card.appendChild(el("div", "subsection-title", "FP 개선 현황"));
+  var improvedN = 0;
+  bothFps.forEach(function(f) {
+    var p = totalAvg(getStageAvgs(f.pre.answers));
+    var q = totalAvg(getStageAvgs(f.post.answers));
+    if (q < p) improvedN++;
+  });
+  var notImprovedN = bothFps.length - improvedN;
+  var iPct = bothFps.length > 0 ? improvedN / bothFps.length * 100 : 0;
+
+  var splitBar = el("div", "split-bar");
+  splitBar.innerHTML = '<div class="split-bar-improved" style="width:' + iPct + '%"></div>'
+    + '<div class="split-bar-not" style="width:' + (100 - iPct) + '%"></div>';
+  card.appendChild(splitBar);
+  var splitLegend = el("div", "split-legend");
+  splitLegend.innerHTML = '<span style="color:#0CA678">●</span> 개선 ' + improvedN + '명 (' + Math.round(iPct) + '%) &nbsp;&nbsp; <span style="color:#C92A2A">●</span> 미개선 ' + notImprovedN + '명 (' + (100 - Math.round(iPct)) + '%)';
+  card.appendChild(splitLegend);
+
+  // 자동 해석
+  var biggestImproveStg = STAGES.reduce(function(best, s) {
+    var bd = preAvg[best.id] - postAvg[best.id];
+    var sd = preAvg[s.id]    - postAvg[s.id];
+    return sd > bd ? s : best;
+  });
+  var smallestImproveStg = STAGES.reduce(function(best, s) {
+    var bd = preAvg[best.id] - postAvg[best.id];
+    var sd = preAvg[s.id]    - postAvg[s.id];
+    return sd < bd ? s : best;
+  });
+
+  var insight = el("div", "insight-box");
+  insight.innerHTML = '교육 후 전체 난이도가 <b>' + preLbl.label + '</b> → <b>' + postLbl.label + '</b>로 변화했습니다. '
+    + '특히 <b style="color:' + biggestImproveStg.color + '">' + biggestImproveStg.id + '단계(' + biggestImproveStg.label + ')</b>에서 가장 큰 개선을 보였습니다. '
+    + '다만 <b style="color:' + smallestImproveStg.color + '">' + smallestImproveStg.id + '단계(' + smallestImproveStg.label + ')</b>은 변화가 가장 적어 추가 보강이 필요합니다.<br><br>'
+    + bothFps.length + '명 중 <b>' + improvedN + '명(' + Math.round(iPct) + '%)</b>이 전반적인 개선을 보였습니다.';
+  card.appendChild(insight);
+
+  return card;
+}
+
+function buildFollowupReport(allFps) {
+  var card = el("div", "chart-card report-section");
+  var head = el("div", "report-step-head");
+  head.innerHTML = '<span class="step-num" style="background:#E8470A">3</span>'
+    + '<span class="step-title">3차 진단 결과</span>'
+    + '<span class="step-tag" style="background:#E8470A14;color:#E8470A">3~4주 후</span>';
+  card.appendChild(head);
+
+  card.appendChild(el("div", "report-note", "현장 정착도 (교육 직후 → 3~4주 후)"));
+
+  var postAvg = avgStageScore(allFps, "post");
+  var fuAvg   = avgStageScore(allFps, "followup");
+
+  card.appendChild(el("div", "subsection-title", "단계별 정착도"));
+  STAGES.forEach(function(stg) {
+    var postLbl = difficultyLabel(postAvg[stg.id]);
+    var fuLbl   = difficultyLabel(fuAvg[stg.id]);
+    var rebound = fuAvg[stg.id] > postAvg[stg.id] + 0.3;
+    var tag = rebound ? "반등" : "유지";
+    var tagColor = rebound ? "#C92A2A" : "#0CA678";
+    var row = el("div", "change-row");
+    row.innerHTML = '<span class="change-stage" style="color:' + stg.color + '">' + stg.id + ' ' + stg.label + '</span>'
+      + '<span class="change-from" style="color:' + postLbl.color + '">' + postLbl.label + '</span>'
+      + '<span class="change-arrow">→</span>'
+      + '<span class="change-to"   style="color:' + fuLbl.color   + '">' + fuLbl.label   + '</span>'
+      + '<span class="change-tag"  style="color:' + tagColor + '">' + tag + '</span>';
+    card.appendChild(row);
+  });
+
+  var fuTotal   = totalAvg(fuAvg);
+  var postTotal = totalAvg(postAvg);
+  var maintained = fuTotal <= postTotal + 0.3;
+
+  var insight = el("div", "insight-box");
+  insight.innerHTML = '3~4주 후 현장 점검 결과, 전체 난이도는 <b style="color:' + difficultyLabel(fuTotal).color + '">' + difficultyLabel(fuTotal).label + '</b> 수준입니다. '
+    + (maintained
+        ? '교육 직후 효과가 현장에서도 잘 유지되고 있습니다.'
+        : '일부 단계에서 어려움이 다시 나타나고 있어 보강 코칭이 필요합니다.');
+  card.appendChild(insight);
+
+  return card;
+}
+
+function buildFpGroups(allFps) {
+  var improved = [], needCoaching = [];
+  allFps.forEach(function(f) {
+    var preT  = totalAvg(getStageAvgs(f.pre.answers));
+    var postT = totalAvg(getStageAvgs(f.post.answers));
+    var fuT   = totalAvg(getStageAvgs(f.followup.answers));
+    var weak  = getWeakestStage(f.pre.answers);
+    var entry = {
+      name: f.name, empId: f.empId, weakStage: weak.primary,
+      preT: preT, postT: postT, fuT: fuT
+    };
+    if (fuT >= 2.8 && fuT >= preT - 0.3) {
+      needCoaching.push(entry);
+    } else if (postT < preT && fuT <= postT + 0.5) {
+      improved.push(entry);
+    }
+  });
+
+  var card = el("div", "chart-card report-section");
+  var grid = el("div", "fp-group-grid");
+
+  // 개선 우수
+  var goodCard = el("div", "fp-group");
+  var goodHead = el("div", "fp-group-head");
+  goodHead.innerHTML = '<span style="color:#0CA678">●</span> <b>개선 우수</b><span class="fp-group-count">' + improved.length + '명</span>';
+  goodCard.appendChild(goodHead);
+  goodCard.appendChild(el("div", "fp-group-sub", "교육 효과가 현장에서도 유지되고 있습니다"));
+  improved.forEach(function(e) {
+    var stg = stageInfo(e.weakStage);
+    var item = el("div", "fp-card");
+    item.innerHTML = '<div class="fp-card-head"><span class="fp-card-name">' + e.name + '</span><span class="fp-dots-mini">●●●</span></div>'
+      + '<div class="fp-tag" style="background:' + stg.color + '14;color:' + stg.color + '">약점: ' + stg.id + '단계</div>'
+      + '<div class="fp-card-score">' + e.preT.toFixed(1) + ' → ' + e.postT.toFixed(1) + ' → ' + e.fuT.toFixed(1) + ' (유지)</div>';
+    goodCard.appendChild(item);
+  });
+  if (improved.length === 0) goodCard.appendChild(el("div", "fp-empty", "해당 없음"));
+  grid.appendChild(goodCard);
+
+  // 추가 코칭 필요
+  var badCard = el("div", "fp-group");
+  var badHead = el("div", "fp-group-head");
+  badHead.innerHTML = '<span style="color:#C92A2A">●</span> <b>추가 코칭 필요</b><span class="fp-group-count">' + needCoaching.length + '명</span>';
+  badCard.appendChild(badHead);
+  badCard.appendChild(el("div", "fp-group-sub", "교육 후에도 어려움이 지속되어 개별 코칭이 필요합니다"));
+  needCoaching.forEach(function(e) {
+    var stg = stageInfo(e.weakStage);
+    var item = el("div", "fp-card");
+    var changeLbl = e.fuT > e.postT + 0.3 ? "반등" : "변화 없음";
+    item.innerHTML = '<div class="fp-card-head"><span class="fp-card-name">' + e.name + '</span><span class="fp-dots-mini">●●○</span></div>'
+      + '<div class="fp-tag" style="background:' + stg.color + '14;color:' + stg.color + '">약점: ' + stg.id + '단계</div>'
+      + '<div class="fp-card-score">' + e.preT.toFixed(1) + ' → ' + e.postT.toFixed(1) + ' → ' + e.fuT.toFixed(1) + ' (' + changeLbl + ')</div>';
+    badCard.appendChild(item);
+  });
+  if (needCoaching.length === 0) badCard.appendChild(el("div", "fp-empty", "해당 없음"));
+  grid.appendChild(badCard);
+
+  card.appendChild(grid);
+  return card;
 }
 
 function fetchFPDetail(empId, callback) {

@@ -425,6 +425,229 @@ h2 {
   font-size: 14px; color: #DC2626; font-weight: 500;
 }
 
+/* === Branch Comprehensive Report === */
+.report-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+.report-eyebrow {
+  font-size: 11px; font-weight: 700;
+  color: #9CA3AF; letter-spacing: 2px;
+  text-transform: uppercase; margin-bottom: 8px;
+}
+.report-title {
+  font-size: 26px; font-weight: 900;
+  color: #1C2B5E;
+}
+.section-title {
+  font-size: 13px; font-weight: 700;
+  color: #6B7280; margin-bottom: 16px;
+  letter-spacing: 0.3px;
+}
+.subsection-title {
+  font-size: 13px; font-weight: 600;
+  color: #6B7280; margin: 20px 0 12px;
+}
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.stat-box {
+  background: #F8F9FB;
+  border-radius: 14px;
+  padding: 16px 6px;
+  text-align: center;
+}
+.stat-num {
+  font-size: 26px; font-weight: 900;
+  color: #1C2B5E; line-height: 1.1;
+}
+.stat-label {
+  font-size: 11px; font-weight: 600;
+  color: #9CA3AF; margin-top: 4px;
+}
+.report-section { padding: 24px; }
+.report-step-head {
+  display: flex; align-items: center;
+  gap: 10px; margin-bottom: 12px;
+}
+.step-num {
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  color: #fff; font-weight: 800;
+  font-size: 14px;
+}
+.step-title {
+  font-size: 18px; font-weight: 800;
+  color: #1C2B5E; flex: 1;
+}
+.step-tag {
+  font-size: 11px; font-weight: 700;
+  padding: 4px 10px; border-radius: 999px;
+}
+.report-note {
+  background: #F8F9FB;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 12px; color: #6B7280;
+  margin-bottom: 18px;
+  line-height: 1.6;
+}
+.change-row {
+  display: grid;
+  grid-template-columns: 70px 1fr 14px 1fr 56px;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 0;
+  font-size: 13px;
+  border-bottom: 1px solid #F3F4F6;
+}
+.change-row:last-of-type { border-bottom: none; }
+.change-stage { font-weight: 700; }
+.change-from, .change-to { font-weight: 600; }
+.change-arrow { color: #9CA3AF; text-align: center; }
+.change-tag {
+  font-size: 11px; font-weight: 700;
+  text-align: right;
+}
+.total-change-box {
+  background: linear-gradient(135deg, #F0F4FF, #F8F9FB);
+  border-radius: 16px;
+  padding: 22px 16px;
+  margin-top: 20px;
+  text-align: center;
+}
+.total-change-label {
+  font-size: 12px; font-weight: 600;
+  color: #6B7280; margin-bottom: 14px;
+}
+.total-change-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+.total-change-side { text-align: center; }
+.total-change-val {
+  font-size: 24px; font-weight: 900;
+}
+.total-change-cap {
+  font-size: 11px; color: #9CA3AF;
+  margin-top: 2px;
+}
+.total-change-arrow {
+  font-size: 22px; color: #9CA3AF;
+  font-weight: 600;
+}
+.total-change-tag {
+  font-size: 14px; font-weight: 700;
+}
+.split-bar {
+  display: flex;
+  height: 14px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #F3F4F6;
+}
+.split-bar-improved { background: #0CA678; }
+.split-bar-not      { background: #C92A2A; }
+.split-legend {
+  display: flex;
+  justify-content: center;
+  font-size: 12px;
+  color: #6B7280;
+  margin-top: 10px;
+  font-weight: 600;
+}
+.insight-box {
+  background: #F8F9FB;
+  border-left: 3px solid #1C2B5E;
+  border-radius: 10px;
+  padding: 14px 16px;
+  font-size: 13px;
+  color: #374151;
+  line-height: 1.7;
+  margin-top: 20px;
+}
+.fp-group-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+.fp-group {
+  background: #F8F9FB;
+  border-radius: 14px;
+  padding: 16px;
+}
+.fp-group-head {
+  display: flex;
+  align-items: center;
+  font-size: 15px;
+  color: #1C2B5E;
+  margin-bottom: 4px;
+}
+.fp-group-count {
+  margin-left: auto;
+  font-size: 12px;
+  color: #9CA3AF;
+  font-weight: 600;
+}
+.fp-group-sub {
+  font-size: 11px;
+  color: #9CA3AF;
+  margin-bottom: 12px;
+}
+.fp-card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+}
+.fp-card-head {
+  display: flex;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.fp-card-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1C2B5E;
+  flex: 1;
+}
+.fp-dots-mini {
+  font-size: 11px;
+  color: #1C2B5E;
+  letter-spacing: 1px;
+}
+.fp-tag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  margin-bottom: 6px;
+}
+.fp-card-score {
+  font-size: 12px;
+  color: #6B7280;
+  font-weight: 600;
+}
+.fp-empty {
+  font-size: 12px;
+  color: #9CA3AF;
+  text-align: center;
+  padding: 12px;
+}
+.fp-dots {
+  font-size: 12px;
+  color: #1C2B5E;
+  letter-spacing: 2px;
+}
+
 /* ============================================
    v2 NEW STYLES
    ============================================ */
