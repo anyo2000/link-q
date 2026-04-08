@@ -847,10 +847,32 @@ function buildAdminBranchSearch() {
 // ─── Fetch Admin Data ───────────────────────────────────────
 
 function fetchAdminData() {
-  jsonpFetch("getSummary", null, function(data) {
+  // export 엔드포인트로 raw responses 받아와서 클라이언트에서 집계
+  jsonpFetch("export", null, function(data) {
     state.loading = false;
-    if (data && !data.error) {
-      state.adminData = data;
+    if (data && data.data) {
+      var rows = data.data || [];
+      var responses = rows.map(function(r) {
+        return {
+          timestamp: r.timestamp,
+          empId: String(r.empId),
+          branch: r.branch,
+          name: r.name || "",
+          timepoint: r.timepoint,
+          answers: [
+            Number(r.Q1) || 0, Number(r.Q2) || 0, Number(r.Q3) || 0, Number(r.Q4) || 0,
+            Number(r.Q5) || 0, Number(r.Q6) || 0, Number(r.Q7) || 0, Number(r.Q8) || 0
+          ],
+          bonusStage: r.bonusStage || "",
+          bonusApplied: r.bonusApplied ? String(r.bonusApplied).split("|").filter(Boolean) : [],
+          bonusReaction: r.bonusReaction || "",
+          comment: r.comment || "",
+          grade: r.grade || "",
+          tenure: r.tenure || "",
+          channel: r.channel || ""
+        };
+      });
+      state.adminData = { responses: responses, master: [], branches: [] };
     } else {
       state.adminData = { responses: [], master: [], branches: [] };
       state.error = data ? data.error : "데이터 로드 실패";
