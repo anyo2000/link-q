@@ -512,42 +512,84 @@ h2 {
 /* === Scale Legend === */
 .scale-legend {
   background: linear-gradient(135deg, #F8F9FB, #FFFFFF);
-  border: 1.5px solid #ECEEF2;
-  border-radius: 14px;
-  padding: 16px 18px;
-  margin-bottom: 22px;
+  border: 2px solid #ECEEF2;
+  border-radius: 16px;
+  padding: 20px 22px;
+  margin-bottom: 24px;
 }
 .scale-legend-title {
-  font-size: 13px;
-  font-weight: 700;
-  color: #6B7280;
-  margin-bottom: 12px;
+  font-size: 16px;
+  font-weight: 800;
+  color: #1C2B5E;
+  margin-bottom: 16px;
+  text-align: center;
 }
 .scale-legend-bar {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 .scale-num {
-  font-size: 22px;
+  font-size: 28px;
   font-weight: 900;
 }
 .scale-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: #6B7280;
+  font-size: 15px;
+  font-weight: 700;
+  color: #4B5563;
 }
 .scale-gradient {
   flex: 1;
-  height: 10px;
+  height: 14px;
   border-radius: 999px;
   background: linear-gradient(90deg, #0CA678 0%, #FAB005 50%, #C92A2A 100%);
 }
 .scale-legend-hint {
-  font-size: 12px;
-  color: #8B95A5;
-  margin-top: 10px;
+  font-size: 14px;
+  color: #6B7280;
+  margin-top: 14px;
   text-align: center;
+  font-weight: 500;
+}
+
+/* === Score Row (점수 강조 막대) === */
+.score-row {
+  margin-bottom: 22px;
+}
+.score-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 10px;
+}
+.score-label {
+  font-size: 18px;
+  font-weight: 800;
+}
+.score-value-wrap {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.score-num {
+  font-size: 26px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+.score-tag {
+  font-size: 14px;
+  font-weight: 700;
+}
+.score-track {
+  height: 14px;
+  background: #F0F2F5;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.score-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* === Compare Box (전후 비교 막대) === */
@@ -636,8 +678,15 @@ h2 {
   letter-spacing: 0.3px;
 }
 .subsection-title {
-  font-size: 15px; font-weight: 700;
-  color: #4B5563; margin: 22px 0 14px;
+  font-size: 16px; font-weight: 800;
+  color: #1C2B5E; margin: 36px 0 18px;
+  padding-top: 24px;
+  border-top: 1px solid #F0F2F5;
+}
+.report-section .subsection-title:first-of-type {
+  margin-top: 28px;
+  padding-top: 0;
+  border-top: none;
 }
 .stat-grid {
   display: grid;
@@ -658,7 +707,7 @@ h2 {
   font-size: 13px; font-weight: 600;
   color: #6B7280; margin-top: 6px;
 }
-.report-section { padding: 24px; }
+.report-section { padding: 28px 22px; margin-bottom: 20px; }
 .report-step-head {
   display: flex; align-items: center;
   gap: 10px; margin-bottom: 12px;
@@ -755,15 +804,39 @@ h2 {
   font-weight: 600;
 }
 .insight-box {
-  background: #F8F9FB;
-  border-left: 3px solid #1C2B5E;
-  border-radius: 10px;
-  padding: 16px 18px;
-  font-size: 15px;
-  color: #374151;
-  line-height: 1.75;
-  margin-top: 22px;
+  background: linear-gradient(135deg, #FFF9F5 0%, #FFF3EC 100%);
+  border: 2px solid #FFE0CC;
+  border-left: 5px solid #E8470A;
+  border-radius: 14px;
+  padding: 22px 22px;
+  font-size: 17px;
+  color: #1C2B5E;
+  line-height: 1.85;
+  margin-top: 36px;
+  font-weight: 500;
 }
+.insight-box b { font-weight: 800; }
+.insight-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: #E8470A;
+  letter-spacing: 1px;
+  margin-bottom: 18px;
+  text-align: center;
+  padding-bottom: 14px;
+  border-bottom: 1.5px dashed #FFD0B5;
+}
+.insight-line {
+  padding: 14px 0;
+  border-bottom: 1px dashed #FFD0B5;
+  font-size: 16px;
+  line-height: 1.7;
+}
+.insight-line:last-child {
+  border-bottom: none;
+  padding-bottom: 4px;
+}
+.insight-line b { font-weight: 800; color: #1C2B5E; }
 .fp-group-grid {
   display: grid;
   grid-template-columns: 1fr;

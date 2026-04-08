@@ -306,9 +306,7 @@ function buildInput() {
     if (ADMIN_IDS.indexOf(state.empId) !== -1) {
       state.error = null;
       state.mode = "admin";
-      state.loading = true;
-      navigate("adminBranchSearch");
-      fetchAdminData();
+      gotoAdminSearch();
       return;
     }
     if (!state.branch) {
@@ -696,14 +694,19 @@ function buildAdminLogin() {
       document.getElementById("admin-error").textContent = state.error;
       return;
     }
-    state.error = null;
-    state.loading = true;
-    navigate("adminBranchSearch");
-    fetchAdminData();
+    gotoAdminSearch();
   });
   wrap.appendChild(btn);
 
   return wrap;
+}
+
+function gotoAdminSearch() {
+  state.error = null;
+  state.adminData = null;
+  state.loading = true;
+  navigate("adminBranchSearch");
+  fetchAdminData();
 }
 
 // ─── Screen: Admin Branch Search ────────────────────────────
@@ -911,7 +914,7 @@ function buildAdmin() {
 
   var back = el("button", "btn-back", "← 지점 검색");
   back.addEventListener("click", function() {
-    navigate("adminBranchSearch", null, true);
+    gotoAdminSearch();
   });
   wrap.appendChild(back);
 
@@ -1134,7 +1137,7 @@ function buildAdminBranchDetail() {
   // Back
   var back = el("button", "btn-back", "← 지점 검색");
   back.addEventListener("click", function() {
-    navigate("adminBranchSearch", null, true);
+    gotoAdminSearch();
   });
   wrap.appendChild(back);
 
@@ -1186,15 +1189,16 @@ function buildAdminBranchDetail() {
   partCard.appendChild(prog);
   wrap.appendChild(partCard);
 
-  // ── 지점 단계별 역량 변화 (Radar) ────────────────────
-  var radarCard = el("div", "chart-card");
-  radarCard.appendChild(el("div", "section-title", "지점 단계별 역량 변화"));
-  var rContainer = el("div", "chart-container");
-  var rCanvas = el("canvas");
-  rCanvas.id = "branch-radar";
-  rContainer.appendChild(rCanvas);
-  radarCard.appendChild(rContainer);
-  wrap.appendChild(radarCard);
+  // ── 지점 단계별 역량 변화 (Bar) ────────────────────
+  var barCard = el("div", "chart-card");
+  barCard.appendChild(el("div", "section-title", "지점 단계별 난이도 변화"));
+  var bContainer = el("div", "chart-container");
+  bContainer.style.cssText = "position:relative;height:280px;";
+  var bCanvas = el("canvas");
+  bCanvas.id = "branch-bar";
+  bContainer.appendChild(bCanvas);
+  barCard.appendChild(bContainer);
+  wrap.appendChild(barCard);
 
   // ── 1차 진단 결과 ────────────────────────────────────
   var preFps = fps.filter(function(f) { return f.pre; });
@@ -1269,13 +1273,16 @@ function buildPreReport(b, preFps) {
   STAGES.forEach(function(stg) {
     var score = avgs[stg.id];
     var diff = difficultyLabel(score);
-    var row = el("div", "bar-row");
-    var meta = el("div", "bar-meta");
-    meta.innerHTML = '<span class="bar-label" style="color:' + stg.color + '">' + stg.id + ' ' + stg.label + '</span>'
-      + '<span class="bar-count"><b style="font-size:18px;color:' + diff.color + '">' + score.toFixed(1) + '</b> <span style="color:' + diff.color + '">· ' + diff.label + '</span></span>';
+    var row = el("div", "score-row");
+    var meta = el("div", "score-meta");
+    meta.innerHTML = '<span class="score-label" style="color:' + stg.color + '">' + stg.id + ' ' + stg.label + '</span>'
+      + '<span class="score-value-wrap">'
+      +   '<span class="score-num" style="color:' + diff.color + '">' + score.toFixed(1) + '</span>'
+      +   '<span class="score-tag" style="color:' + diff.color + '">' + diff.label + '</span>'
+      + '</span>';
     row.appendChild(meta);
-    var track = el("div", "bar-track");
-    var fill = el("div", "bar-fill");
+    var track = el("div", "score-track");
+    var fill = el("div", "score-fill");
     fill.style.cssText = "width:" + (score / 5 * 100) + "%;background:" + diff.color;
     track.appendChild(fill);
     row.appendChild(track);
@@ -1293,13 +1300,16 @@ function buildPreReport(b, preFps) {
     var c = weakCount[stg.id];
     var pct = preFps.length > 0 ? Math.round(c / preFps.length * 100) : 0;
     var isMax = c === maxCount && c > 0;
-    var row = el("div", "bar-row");
-    var meta = el("div", "bar-meta");
-    meta.innerHTML = '<span class="bar-label" style="color:' + stg.color + '">' + stg.id + ' ' + stg.label + '</span>'
-      + '<span class="bar-count">' + c + '명 (' + pct + '%)' + (isMax ? ' <b style="color:' + stg.color + '">최다</b>' : '') + '</span>';
+    var row = el("div", "score-row");
+    var meta = el("div", "score-meta");
+    meta.innerHTML = '<span class="score-label" style="color:' + stg.color + '">' + stg.id + ' ' + stg.label + '</span>'
+      + '<span class="score-value-wrap">'
+      +   '<span class="score-num" style="color:' + stg.color + '">' + c + '<span style="font-size:16px">명</span></span>'
+      +   '<span class="score-tag" style="color:' + stg.color + '">' + pct + '%' + (isMax ? ' · 최다' : '') + '</span>'
+      + '</span>';
     row.appendChild(meta);
-    var track = el("div", "bar-track");
-    var fill = el("div", "bar-fill");
+    var track = el("div", "score-track");
+    var fill = el("div", "score-fill");
     fill.style.cssText = "width:" + pct + "%;background:" + stg.color + (isMax ? '' : '66');
     track.appendChild(fill);
     row.appendChild(track);
@@ -1313,9 +1323,22 @@ function buildPreReport(b, preFps) {
   var topWeakPct = preFps.length > 0 ? Math.round(weakCount[topWeakStg.id] / preFps.length * 100) : 0;
 
   var insight = el("div", "insight-box");
-  insight.innerHTML = b.name + ' FP들은 <b style="color:' + hardestStg.color + '">' + hardestStg.id + '단계(' + hardestStg.label + ')</b>를 가장 어려워합니다 (<b style="color:' + difficultyLabel(avgs[hardestStg.id]).color + '">' + difficultyLabel(avgs[hardestStg.id]).label + '</b>). '
-    + preFps.length + '명 중 <b>' + weakCount[topWeakStg.id] + '명(' + topWeakPct + '%)</b>이 <b style="color:' + topWeakStg.color + '">' + topWeakStg.id + '단계</b>를 가장 어려운 단계로 꼽았습니다. '
-    + '반면 <b style="color:' + easiestStg.color + '">' + easiestStg.id + '단계(' + easiestStg.label + ')</b>은 상대적으로 자신있는 단계입니다 (<b style="color:' + difficultyLabel(avgs[easiestStg.id]).color + '">' + difficultyLabel(avgs[easiestStg.id]).label + '</b>).';
+  insight.innerHTML = '<div class="insight-title">📊 핵심 요약</div>'
+    + '<div class="insight-line">'
+    +   '<b>가장 어려운 단계</b><br>'
+    +   '<span style="color:' + hardestStg.color + ';font-weight:800">' + hardestStg.id + '단계(' + hardestStg.label + ')</span> · '
+    +   '<span style="color:' + difficultyLabel(avgs[hardestStg.id]).color + ';font-weight:800">' + difficultyLabel(avgs[hardestStg.id]).label + '</span>'
+    + '</div>'
+    + '<div class="insight-line">'
+    +   '<b>최약점 응답</b><br>'
+    +   preFps.length + '명 중 <b style="font-size:20px;color:' + topWeakStg.color + '">' + weakCount[topWeakStg.id] + '명(' + topWeakPct + '%)</b>이<br>'
+    +   '<span style="color:' + topWeakStg.color + ';font-weight:800">' + topWeakStg.id + '단계</span>를 가장 어렵게 꼽음'
+    + '</div>'
+    + '<div class="insight-line">'
+    +   '<b>가장 자신있는 단계</b><br>'
+    +   '<span style="color:' + easiestStg.color + ';font-weight:800">' + easiestStg.id + '단계(' + easiestStg.label + ')</span> · '
+    +   '<span style="color:' + difficultyLabel(avgs[easiestStg.id]).color + ';font-weight:800">' + difficultyLabel(avgs[easiestStg.id]).label + '</span>'
+    + '</div>';
   card.appendChild(insight);
 
   return card;
@@ -1462,20 +1485,27 @@ function buildPostReport(bothFps) {
     }, null);
 
   var insight = el("div", "insight-box");
-  var html = "";
+  var html = '<div class="insight-title">📊 핵심 요약</div>';
   if (topImpact.eased > 0) {
-    html += '✅ 가장 큰 변화: <b style="color:' + topImpact.stg.color + '">'
-      + topImpact.stg.id + '단계(' + topImpact.stg.label + ')</b>에서 어렵게 느끼던 '
-      + '<b>' + topImpact.hardBefore + '명</b> 중 '
-      + '<b style="color:#0CA678">' + topImpact.eased + '명</b>이 쉬워졌습니다.';
+    html += '<div class="insight-line">'
+      + '<b>✅ 가장 큰 변화</b><br>'
+      + '<span style="color:' + topImpact.stg.color + ';font-weight:800">' + topImpact.stg.id + '단계(' + topImpact.stg.label + ')</span><br>'
+      + '어렵게 느끼던 <b>' + topImpact.hardBefore + '명</b> 중<br>'
+      + '<b style="font-size:22px;color:#0CA678">' + topImpact.eased + '명</b>이 쉬워졌습니다'
+      + '</div>';
   }
   if (stuck && stuck.eased < stuck.hardBefore) {
-    html += '<br><br>⚠️ 보강 필요: <b style="color:' + stuck.stg.color + '">'
-      + stuck.stg.id + '단계(' + stuck.stg.label + ')</b>는 어렵게 느끼던 '
-      + '<b>' + stuck.hardBefore + '명</b> 중 '
-      + '<b style="color:#C92A2A">' + (stuck.hardBefore - stuck.eased) + '명</b>이 여전히 어려워합니다.';
+    html += '<div class="insight-line">'
+      + '<b>⚠️ 보강 필요</b><br>'
+      + '<span style="color:' + stuck.stg.color + ';font-weight:800">' + stuck.stg.id + '단계(' + stuck.stg.label + ')</span><br>'
+      + '어렵게 느끼던 <b>' + stuck.hardBefore + '명</b> 중<br>'
+      + '<b style="font-size:22px;color:#C92A2A">' + (stuck.hardBefore - stuck.eased) + '명</b>이 여전히 어려워합니다'
+      + '</div>';
   }
-  insight.innerHTML = html || (bothFps.length + '명 중 ' + improvedN + '명이 개선을 보였습니다.');
+  if (html === '<div class="insight-title">📊 핵심 요약</div>') {
+    html += '<div class="insight-line">' + bothFps.length + '명 중 ' + improvedN + '명이 개선을 보였습니다.</div>';
+  }
+  insight.innerHTML = html;
   card.appendChild(insight);
 
   return card;
@@ -1585,20 +1615,27 @@ function buildFollowupReport(allFps) {
     }, null);
 
   var insight = el("div", "insight-box");
-  var html = "";
+  var html = '<div class="insight-title">📊 핵심 요약</div>';
   if (worstRebound.rebound > 0) {
-    html += '⚠️ 가장 큰 반등: <b style="color:' + worstRebound.stg.color + '">'
-      + worstRebound.stg.id + '단계(' + worstRebound.stg.label + ')</b>에서 직후 쉽게 느끼던 '
-      + '<b>' + worstRebound.easyAfter + '명</b> 중 '
-      + '<b style="color:#C92A2A">' + worstRebound.rebound + '명</b>이 현장에서 다시 어려워합니다.';
+    html += '<div class="insight-line">'
+      + '<b>⚠️ 가장 큰 반등</b><br>'
+      + '<span style="color:' + worstRebound.stg.color + ';font-weight:800">' + worstRebound.stg.id + '단계(' + worstRebound.stg.label + ')</span><br>'
+      + '직후 쉽게 느끼던 <b>' + worstRebound.easyAfter + '명</b> 중<br>'
+      + '<b style="font-size:22px;color:#C92A2A">' + worstRebound.rebound + '명</b>이 현장에서 다시 어려워합니다'
+      + '</div>';
   }
   if (bestStable && bestStable.rebound === 0 && bestStable.easyAfter > 0) {
-    html += (html ? '<br><br>' : '')
-      + '✅ 잘 정착: <b style="color:' + bestStable.stg.color + '">'
-      + bestStable.stg.id + '단계(' + bestStable.stg.label + ')</b>는 직후 쉽게 느끼던 '
-      + '<b>' + bestStable.easyAfter + '명</b> 모두 현장에서 잘 유지하고 있습니다.';
+    html += '<div class="insight-line">'
+      + '<b>✅ 잘 정착</b><br>'
+      + '<span style="color:' + bestStable.stg.color + ';font-weight:800">' + bestStable.stg.id + '단계(' + bestStable.stg.label + ')</span><br>'
+      + '직후 쉽게 느끼던 <b>' + bestStable.easyAfter + '명</b> 모두<br>'
+      + '현장에서 <b style="color:#0CA678">잘 유지</b>하고 있습니다'
+      + '</div>';
   }
-  insight.innerHTML = html || '3~4주 후에도 큰 변화 없이 유지되고 있습니다.';
+  if (html === '<div class="insight-title">📊 핵심 요약</div>') {
+    html += '<div class="insight-line">3~4주 후에도 큰 변화 없이 유지되고 있습니다.</div>';
+  }
+  insight.innerHTML = html;
   card.appendChild(insight);
 
   return card;
@@ -2198,7 +2235,7 @@ function renderCharts() {
       if (state.adminTab === "group") renderAdminGroupCharts();
       break;
     case "adminBranchDetail":
-      renderTimepointRadar("branch-radar", getBranchTimepointData(state.adminBranch));
+      renderTimepointGroupedBar("branch-bar", getBranchTimepointData(state.adminBranch));
       break;
     case "adminFPDetail":
       renderTimepointRadar("fp-radar", getFPTimepointData(state.adminFP));
@@ -2252,6 +2289,81 @@ function renderResultRadar() {
     },
   });
   state._charts["result-radar"] = chart;
+}
+
+function renderTimepointGroupedBar(canvasId, tpData) {
+  var canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+
+  var tpConfigs = [
+    { key: "pre",      label: "교육 전",  color: "#3B5BDB" },
+    { key: "post",     label: "교육 직후", color: "#0CA678" },
+    { key: "followup", label: "3~4주 후", color: "#E8470A" },
+  ];
+
+  var datasets = [];
+  tpConfigs.forEach(function(tc) {
+    if (tpData[tc.key]) {
+      datasets.push({
+        label: tc.label,
+        data: STAGES.map(function(stg) { return tpData[tc.key][stg.id] || 0; }),
+        backgroundColor: tc.color,
+        borderRadius: 6,
+        barPercentage: 0.85,
+        categoryPercentage: 0.75,
+      });
+    }
+  });
+
+  if (datasets.length === 0) return;
+
+  var chart = new Chart(canvas, {
+    type: "bar",
+    data: {
+      labels: STAGES.map(function(s) { return s.id + " " + s.label; }),
+      datasets: datasets,
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: 5,
+          ticks: {
+            stepSize: 1,
+            font: { size: 13, weight: "600" },
+            color: "#6B7280",
+            callback: function(v) {
+              if (v === 1) return "1 쉬움";
+              if (v === 5) return "5 어려움";
+              return v;
+            }
+          },
+          grid: { color: "rgba(0,0,0,0.06)" },
+        },
+        x: {
+          ticks: {
+            font: { size: 14, weight: "700" },
+            color: "#1C2B5E",
+          },
+          grid: { display: false },
+        },
+      },
+      plugins: {
+        legend: {
+          position: "bottom",
+          labels: { font: { size: 14, weight: "600" }, padding: 14, boxWidth: 14 }
+        },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) { return ctx.dataset.label + ": " + ctx.parsed.y.toFixed(1); }
+          }
+        }
+      },
+    },
+  });
+  state._charts[canvasId] = chart;
 }
 
 function renderTimepointRadar(canvasId, tpData) {
