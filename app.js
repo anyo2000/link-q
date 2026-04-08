@@ -797,20 +797,30 @@ function buildAdminBranchSearch() {
   });
   wrap.appendChild(refreshBtn);
 
-  // 지점별 그룹화
+  // 지점별 그룹화 (정규화된 키로 합치기)
   var branchMap = {};
   responses.forEach(function(r) {
     if (!r.branch) return;
-    if (!branchMap[r.branch]) {
-      branchMap[r.branch] = { name: r.branch, fps: {}, pre: 0, post: 0, followup: 0 };
+    var key = normalizeBranch(r.branch);
+    if (!branchMap[key]) {
+      branchMap[key] = { key: key, originals: {}, fps: {}, pre: 0, post: 0, followup: 0 };
     }
-    branchMap[r.branch].fps[r.empId] = true;
-    if (r.timepoint === "pre") branchMap[r.branch].pre++;
-    else if (r.timepoint === "post") branchMap[r.branch].post++;
-    else if (r.timepoint === "followup") branchMap[r.branch].followup++;
+    branchMap[key].originals[r.branch] = true;
+    branchMap[key].fps[r.empId] = true;
+    if (r.timepoint === "pre") branchMap[key].pre++;
+    else if (r.timepoint === "post") branchMap[key].post++;
+    else if (r.timepoint === "followup") branchMap[key].followup++;
   });
   var allBranches = Object.keys(branchMap).map(function(k) {
-    return { name: k, fpCount: Object.keys(branchMap[k].fps).length, raw: branchMap[k] };
+    var b = branchMap[k];
+    var originals = Object.keys(b.originals);
+    return {
+      name: pickBranchDisplayName(originals),
+      key: k,
+      originals: originals,
+      fpCount: Object.keys(b.fps).length,
+      raw: b
+    };
   }).sort(function(a, b) { return b.fpCount - a.fpCount; });
 
   // 검색 입력
@@ -870,7 +880,7 @@ function buildAdminBranchSearch() {
       item.appendChild(name);
       item.appendChild(meta);
       item.addEventListener("click", function() {
-        state.adminBranch = { name: b.name };
+        state.adminBranch = { name: b.name, key: b.key, originals: b.originals };
         navigate("adminBranchDetail");
       });
       listWrap.appendChild(item);
@@ -883,7 +893,8 @@ function buildAdminBranchSearch() {
       var q = (input.value || "").trim().toLowerCase();
       var filtered = allBranches.filter(function(b) { return b.name.toLowerCase().indexOf(q) >= 0; });
       if (filtered.length > 0) {
-        state.adminBranch = { name: filtered[0].name };
+        var f0 = filtered[0];
+        state.adminBranch = { name: f0.name, key: f0.key, originals: f0.originals };
         navigate("adminBranchDetail");
       }
     }
@@ -1114,6 +1125,29 @@ function buildAdminBranch(wrap) {
 
 // ─── Screen: Admin Branch Detail ────────────────────────────
 
+// 지점명 정규화: 한양/한양지점/한양SFP → 같은 그룹으로 인식
+function normalizeBranch(name) {
+  if (!name) return "";
+  return String(name)
+    .replace(/\s+/g, "")           // 공백 제거
+    .replace(/(지점|SFP|sfp|점)$/i, "") // 끝의 지점/SFP/점 제거
+    .toLowerCase();
+}
+
+// 그룹의 대표 표시명: SFP 접미사가 하나라도 있으면 "○○SFP", 아니면 "○○지점"
+function pickBranchDisplayName(names) {
+  // 정규화 후 base 추출
+  var base = null;
+  var hasSfp = false;
+  names.forEach(function(n) {
+    var clean = String(n).replace(/\s+/g, "");
+    if (/sfp$/i.test(clean)) hasSfp = true;
+    var b = clean.replace(/(지점|SFP|sfp|점)$/i, "");
+    if (!base || b.length > base.length) base = b;
+  });
+  return base + (hasSfp ? "SFP" : "지점");
+}
+
 function difficultyLabel(score) {
   if (score >= 4.5) return { label: "매우어려움", color: "#C92A2A" };
   if (score >= 3.5) return { label: "어려움",     color: "#E8470A" };
@@ -1142,7 +1176,8 @@ function buildAdminBranchDetail() {
   var wrap = el("div", "screen");
   var b = state.adminBranch;
   var data = state.adminData || { responses: [] };
-  var allResp = (data.responses || []).filter(function(r) { return r.branch === b.name; });
+  var bKey = b.key || normalizeBranch(b.name);
+  var allResp = (data.responses || []).filter(function(r) { return normalizeBranch(r.branch) === bKey; });
 
   // Group by FP
   var fpMap = {};
