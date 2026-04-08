@@ -914,12 +914,32 @@ function fetchAdminData() {
           channel: r.channel || ""
         };
       });
+      // 중복 제거: (empId + timepoint) 조합별로 timestamp 가장 최신 1건만 사용
+      responses = dedupeLatestPerEmpTimepoint(responses);
       state.adminData = { responses: responses, master: [], branches: [] };
     } else {
       state.adminData = { responses: [], master: [], branches: [] };
       state.error = data ? data.error : "데이터 로드 실패";
     }
     render();
+  });
+}
+
+// (empId, timepoint) 조합별로 timestamp 가장 최신 응답 1건만 남김
+function dedupeLatestPerEmpTimepoint(responses) {
+  var latest = {};
+  responses.forEach(function(r) {
+    var key = r.empId + "|" + r.timepoint;
+    var t = new Date(r.timestamp).getTime() || 0;
+    if (!latest[key] || t > latest[key]._t) {
+      r._t = t;
+      latest[key] = r;
+    }
+  });
+  return Object.keys(latest).map(function(k) {
+    var r = latest[k];
+    delete r._t;
+    return r;
   });
 }
 
