@@ -1164,7 +1164,7 @@ function pickBranchDisplayName(names) {
     var b = clean.replace(/(지점|SFP|sfp|점)$/i, "");
     if (!base || b.length > base.length) base = b;
   });
-  return base + (hasSfp ? "SFP" : "지점");
+  return base + (hasSfp ? "SFP지점" : "지점");
 }
 
 function difficultyLabel(score) {
