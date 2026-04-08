@@ -779,24 +779,6 @@ function buildAdminBranchSearch() {
   var data = state.adminData || { responses: [] };
   var responses = data.responses || [];
 
-  // 디버그: 받은 응답 수 표시
-  var debug = el("div", "search-debug");
-  debug.style.cssText = "font-size:11px;color:#9CA3AF;text-align:center;margin-bottom:12px;";
-  debug.textContent = "서버 응답: " + responses.length + "건";
-  wrap.appendChild(debug);
-
-  // 새로고침 버튼
-  var refreshBtn = el("button", "btn-mini", "🔄 데이터 새로고침");
-  refreshBtn.style.cssText = "display:block;margin:0 auto 16px;";
-  refreshBtn.addEventListener("click", function() {
-    state.loading = true;
-    state.error = null;
-    state.adminData = null;
-    render();
-    fetchAdminData();
-  });
-  wrap.appendChild(refreshBtn);
-
   // 지점별 그룹화 (정규화된 키로 합치기)
   var branchMap = {};
   responses.forEach(function(r) {
@@ -1015,45 +997,82 @@ function buildAdminOverview(wrap) {
   var data = state.adminData || { responses: [] };
   var responses = data.responses || [];
 
-  var preCnt = 0, postCnt = 0, fuCnt = 0;
+  // 고유 FP / 시점별 카운트
+  var fpSet = {};
+  var preFpSet = {}, postFpSet = {}, fuFpSet = {};
   responses.forEach(function(r) {
-    if (r.timepoint === "pre") preCnt++;
-    else if (r.timepoint === "post") postCnt++;
-    else if (r.timepoint === "followup") fuCnt++;
+    fpSet[r.empId] = true;
+    if (r.timepoint === "pre") preFpSet[r.empId] = true;
+    else if (r.timepoint === "post") postFpSet[r.empId] = true;
+    else if (r.timepoint === "followup") fuFpSet[r.empId] = true;
   });
+  var totalFPs = Object.keys(fpSet).length;
+  var preCnt = Object.keys(preFpSet).length;
+  var postCnt = Object.keys(postFpSet).length;
+  var fuCnt = Object.keys(fuFpSet).length;
 
-  // Stat cards
-  var cards = el("div", "stat-cards");
+  // 지점 수 (정규화 기준)
+  var branchKeys = {};
+  responses.forEach(function(r) { if (r.branch) branchKeys[normalizeBranch(r.branch)] = true; });
+  var branchCount = Object.keys(branchKeys).length;
+
+  // 참여 현황 카드
+  var partCard = el("div", "chart-card");
+  partCard.appendChild(el("div", "section-title", "전체 참여 현황"));
+  var stats = el("div", "stat-grid");
   [
-    { label: "교육 전", num: preCnt, color: "#3B5BDB" },
-    { label: "교육 직후", num: postCnt, color: "#0CA678" },
-    { label: "3~4주 후", num: fuCnt, color: "#E8470A" },
+    { num: branchCount, label: "참여 지점", color: "#1C2B5E" },
+    { num: totalFPs,   label: "전체 FP",   color: "#1C2B5E" },
+    { num: preCnt,     label: "교육 전",    color: "#3B5BDB" },
+    { num: postCnt,    label: "교육 직후",  color: "#0CA678" },
   ].forEach(function(s) {
-    var card = el("div", "stat-card");
-    card.innerHTML = '<div class="stat-num" style="color:' + s.color + '">' + s.num + '</div><div class="stat-label">' + s.label + '</div>';
-    cards.appendChild(card);
+    var box = el("div", "stat-box");
+    var n = el("div", "stat-num", String(s.num));
+    n.style.color = s.color;
+    box.appendChild(n);
+    box.appendChild(el("div", "stat-label", s.label));
+    stats.appendChild(box);
   });
-  wrap.appendChild(cards);
+  partCard.appendChild(stats);
+  // 추가: 진행률 바
+  var prog = el("div");
+  prog.style.marginTop = "20px";
+  [
+    { label: "교육 전",  count: preCnt,  color: "#3B5BDB" },
+    { label: "직후",     count: postCnt, color: "#0CA678" },
+    { label: "3~4주 후", count: fuCnt,   color: "#E8470A" },
+  ].forEach(function(p) {
+    var pct = totalFPs > 0 ? Math.round(p.count / totalFPs * 100) : 0;
+    var row = el("div", "bar-row");
+    var meta = el("div", "bar-meta");
+    meta.innerHTML = '<span class="bar-label">' + p.label + '</span>'
+      + '<span class="bar-count" style="color:' + p.color + ';font-weight:700">' + pct + '%</span>';
+    row.appendChild(meta);
+    var track = el("div", "bar-track");
+    var fill = el("div", "bar-fill");
+    fill.style.cssText = "width:" + pct + "%;background:" + p.color;
+    track.appendChild(fill);
+    row.appendChild(track);
+    prog.appendChild(row);
+  });
+  partCard.appendChild(prog);
+  wrap.appendChild(partCard);
 
-  // Radar chart: pre/post/followup overlaid
+  // 점수 범례
+  var legendCard = el("div", "chart-card");
+  legendCard.appendChild(buildScaleLegend());
+  wrap.appendChild(legendCard);
+
+  // 단계별 막대그래프 (시점 비교)
   var chartCard = el("div", "chart-card");
-  chartCard.innerHTML = '<div class="chart-title">단계별 평균 (시점 비교)</div>';
+  chartCard.appendChild(el("div", "section-title", "전체 단계별 난이도 변화"));
   var container = el("div", "chart-container");
+  container.style.cssText = "position:relative;height:280px;";
   var canvas = el("canvas");
   canvas.id = "admin-radar";
   container.appendChild(canvas);
   chartCard.appendChild(container);
   wrap.appendChild(chartCard);
-
-  // Q1~Q8 bar chart (교육 전 기준)
-  var barCard = el("div", "chart-card");
-  barCard.innerHTML = '<div class="chart-title">문항별 평균 (교육 전)</div>';
-  var barContainer = el("div", "chart-container");
-  var barCanvas = el("canvas");
-  barCanvas.id = "admin-qbar";
-  barContainer.appendChild(barCanvas);
-  barCard.appendChild(barContainer);
-  wrap.appendChild(barCard);
 
   // Bonus stats
   var postResponses = responses.filter(function(r) { return r.timepoint === "post" && r.bonusStage; });
@@ -2489,7 +2508,7 @@ function renderAdminOverviewCharts() {
 
   // Radar chart: pre/post/followup
   var tpData = computeTimepointAverages(responses);
-  renderTimepointRadar("admin-radar", tpData);
+  renderTimepointGroupedBar("admin-radar", tpData);
 
   // Q bar chart (pre only)
   var preResponses = responses.filter(function(r) { return r.timepoint === "pre"; });
