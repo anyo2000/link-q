@@ -211,6 +211,7 @@ function buildScreen() {
     case "bonus": return buildBonus();
     case "result": return buildResult();
     case "adminLogin": return buildAdminLogin();
+    case "adminBranchSearch": return buildAdminBranchSearch();
     case "admin": return buildAdmin();
     case "adminBranchDetail": return buildAdminBranchDetail();
     case "adminFPDetail": return buildAdminFPDetail();
@@ -301,12 +302,12 @@ function buildInput() {
   var btn = el("button", "btn-full", "다음 →");
   btn.style.marginTop = "28px";
   btn.addEventListener("click", function() {
-    // 관리자 사번이면 지점명 무시하고 바로 관리자 대시보드로
+    // 관리자 사번이면 지점명 무시하고 바로 관리자 검색 화면으로
     if (ADMIN_IDS.indexOf(state.empId) !== -1) {
       state.error = null;
       state.mode = "admin";
       state.loading = true;
-      navigate("admin");
+      navigate("adminBranchSearch");
       fetchAdminData();
       return;
     }
@@ -697,11 +698,149 @@ function buildAdminLogin() {
     }
     state.error = null;
     state.loading = true;
-    navigate("admin");
+    navigate("adminBranchSearch");
     fetchAdminData();
   });
   wrap.appendChild(btn);
 
+  return wrap;
+}
+
+// ─── Screen: Admin Branch Search ────────────────────────────
+
+function buildAdminBranchSearch() {
+  var wrap = el("div", "screen");
+
+  // 상단: 로그아웃(처음으로) + 전체보기 토글
+  var topbar = el("div", "search-topbar");
+  var logout = el("button", "btn-back", "← 처음으로");
+  logout.addEventListener("click", function() {
+    state.mode = "fp";
+    state.empId = "";
+    state.branch = "";
+    state.adminData = null;
+    state.timepoint = "pre";
+    navigate("cover", null, true);
+  });
+  topbar.appendChild(logout);
+
+  var allBtn = el("button", "btn-mini", "전체 통계 →");
+  allBtn.addEventListener("click", function() {
+    state.adminTab = "overview";
+    navigate("admin");
+  });
+  topbar.appendChild(allBtn);
+  wrap.appendChild(topbar);
+
+  // Header
+  var header = el("div", "report-header");
+  header.innerHTML = '<div class="report-eyebrow">LINK 관리자</div>'
+    + '<div class="report-title">지점 검색</div>';
+  wrap.appendChild(header);
+
+  if (state.loading) {
+    var lw = el("div", "loading-wrap");
+    lw.innerHTML = '<div class="spinner"></div><div class="loading-text">데이터 불러오는 중...</div>';
+    wrap.appendChild(lw);
+    return wrap;
+  }
+
+  var data = state.adminData || { responses: [] };
+  var responses = data.responses || [];
+
+  // 지점별 그룹화
+  var branchMap = {};
+  responses.forEach(function(r) {
+    if (!r.branch) return;
+    if (!branchMap[r.branch]) {
+      branchMap[r.branch] = { name: r.branch, fps: {}, pre: 0, post: 0, followup: 0 };
+    }
+    branchMap[r.branch].fps[r.empId] = true;
+    if (r.timepoint === "pre") branchMap[r.branch].pre++;
+    else if (r.timepoint === "post") branchMap[r.branch].post++;
+    else if (r.timepoint === "followup") branchMap[r.branch].followup++;
+  });
+  var allBranches = Object.keys(branchMap).map(function(k) {
+    return { name: k, fpCount: Object.keys(branchMap[k].fps).length, raw: branchMap[k] };
+  }).sort(function(a, b) { return b.fpCount - a.fpCount; });
+
+  // 검색 입력
+  var searchBox = el("div", "search-box");
+  var input = el("input", "search-input");
+  input.type = "text";
+  input.placeholder = "지점명을 입력하세요 (예: 한화)";
+  input.value = state._adminSearch || "";
+  input.autofocus = true;
+  searchBox.appendChild(input);
+  wrap.appendChild(searchBox);
+
+  // 결과 리스트
+  var listWrap = el("div", "search-list");
+  wrap.appendChild(listWrap);
+
+  function renderList() {
+    listWrap.innerHTML = "";
+    var q = (input.value || "").trim().toLowerCase();
+    state._adminSearch = input.value;
+
+    var filtered = q
+      ? allBranches.filter(function(b) { return b.name.toLowerCase().indexOf(q) >= 0; })
+      : allBranches;
+
+    if (allBranches.length === 0) {
+      var empty = el("div", "search-empty", "응답 데이터가 없습니다");
+      listWrap.appendChild(empty);
+      return;
+    }
+
+    if (filtered.length === 0) {
+      var noResult = el("div", "search-empty", '"' + input.value + '"에 해당하는 지점이 없습니다');
+      listWrap.appendChild(noResult);
+      return;
+    }
+
+    if (!q) {
+      var head = el("div", "search-list-head", "전체 지점 (" + allBranches.length + "개)");
+      listWrap.appendChild(head);
+    }
+
+    filtered.forEach(function(b) {
+      var item = el("div", "search-item");
+      var name = el("div", "search-item-name");
+      // 검색어 하이라이트
+      if (q) {
+        var i = b.name.toLowerCase().indexOf(q);
+        name.innerHTML = b.name.substring(0, i)
+          + '<mark>' + b.name.substring(i, i + q.length) + '</mark>'
+          + b.name.substring(i + q.length);
+      } else {
+        name.textContent = b.name;
+      }
+      var meta = el("div", "search-item-meta");
+      meta.innerHTML = 'FP <b>' + b.fpCount + '명</b> · 교육 전 ' + b.raw.pre + ' / 직후 ' + b.raw.post + ' / 추후 ' + b.raw.followup;
+      item.appendChild(name);
+      item.appendChild(meta);
+      item.addEventListener("click", function() {
+        state.adminBranch = { name: b.name };
+        navigate("adminBranchDetail");
+      });
+      listWrap.appendChild(item);
+    });
+  }
+
+  input.addEventListener("input", renderList);
+  input.addEventListener("keydown", function(e) {
+    if (e.key === "Enter") {
+      var q = (input.value || "").trim().toLowerCase();
+      var filtered = allBranches.filter(function(b) { return b.name.toLowerCase().indexOf(q) >= 0; });
+      if (filtered.length > 0) {
+        state.adminBranch = { name: filtered[0].name };
+        navigate("adminBranchDetail");
+      }
+    }
+  });
+
+  renderList();
   return wrap;
 }
 
@@ -724,6 +863,12 @@ function fetchAdminData() {
 
 function buildAdmin() {
   var wrap = el("div", "screen");
+
+  var back = el("button", "btn-back", "← 지점 검색");
+  back.addEventListener("click", function() {
+    navigate("adminBranchSearch", null, true);
+  });
+  wrap.appendChild(back);
 
   // Header
   var header = el("div", "admin-header");
@@ -942,10 +1087,9 @@ function buildAdminBranchDetail() {
   var fuCnt   = fps.filter(function(f) { return f.followup; }).length;
 
   // Back
-  var back = el("button", "btn-back", "← 지점 목록");
+  var back = el("button", "btn-back", "← 지점 검색");
   back.addEventListener("click", function() {
-    state.adminTab = "branch";
-    navigate("admin", null, true);
+    navigate("adminBranchSearch", null, true);
   });
   wrap.appendChild(back);
 
