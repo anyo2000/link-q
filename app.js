@@ -1239,6 +1239,20 @@ function buildAdminBranchDetail() {
 
 // ─── Branch Report Sub-sections ─────────────────────────────
 
+function buildScaleLegend() {
+  var legend = el("div", "scale-legend");
+  legend.innerHTML = '<div class="scale-legend-title">FP가 느끼는 난이도</div>'
+    + '<div class="scale-legend-bar">'
+    +   '<span class="scale-num" style="color:#0CA678">1</span>'
+    +   '<span class="scale-label">쉬움</span>'
+    +   '<div class="scale-gradient"></div>'
+    +   '<span class="scale-label">어려움</span>'
+    +   '<span class="scale-num" style="color:#C92A2A">5</span>'
+    + '</div>'
+    + '<div class="scale-legend-hint">점수가 <b>높을수록</b> 어렵게 느낀다는 뜻입니다</div>';
+  return legend;
+}
+
 function buildPreReport(b, preFps) {
   var card = el("div", "chart-card report-section");
   var head = el("div", "report-step-head");
@@ -1247,9 +1261,7 @@ function buildPreReport(b, preFps) {
     + '<span class="step-tag" style="background:#3B5BDB14;color:#3B5BDB">교육 전</span>';
   card.appendChild(head);
 
-  var note = el("div", "report-note");
-  note.innerHTML = 'FP들이 느끼는 난이도<br><span style="color:#3B5BDB">1 수월</span> ━━━━━━━━ <span style="color:#C92A2A">5 매우 어려움</span>';
-  card.appendChild(note);
+  card.appendChild(buildScaleLegend());
 
   var avgs = avgStageScore(preFps, "pre");
 
@@ -1259,9 +1271,8 @@ function buildPreReport(b, preFps) {
     var diff = difficultyLabel(score);
     var row = el("div", "bar-row");
     var meta = el("div", "bar-meta");
-    var emph = score >= 3.5 ? ' !' : '';
     meta.innerHTML = '<span class="bar-label" style="color:' + stg.color + '">' + stg.id + ' ' + stg.label + '</span>'
-      + '<span class="bar-count" style="color:' + diff.color + ';font-weight:700">' + diff.label + emph + '</span>';
+      + '<span class="bar-count"><b style="font-size:18px;color:' + diff.color + '">' + score.toFixed(1) + '</b> <span style="color:' + diff.color + '">· ' + diff.label + '</span></span>';
     row.appendChild(meta);
     var track = el("div", "bar-track");
     var fill = el("div", "bar-fill");
@@ -1318,41 +1329,95 @@ function buildPostReport(bothFps) {
     + '<span class="step-tag" style="background:#0CA67814;color:#0CA678">교육 직후</span>';
   card.appendChild(head);
 
-  card.appendChild(el("div", "report-note", "교육 전후 난이도 변화 (점수가 낮아질수록 개선)"));
+  card.appendChild(el("div", "report-note", "교육 전후 난이도 변화 — 막대가 짧아졌을수록 쉽게 느낀다는 뜻"));
 
   var preAvg  = avgStageScore(bothFps, "pre");
   var postAvg = avgStageScore(bothFps, "post");
 
   card.appendChild(el("div", "subsection-title", "단계별 변화 (교육 전 → 직후)"));
   STAGES.forEach(function(stg) {
-    var preLbl  = difficultyLabel(preAvg[stg.id]);
-    var postLbl = difficultyLabel(postAvg[stg.id]);
-    var improved = postAvg[stg.id] < preAvg[stg.id] - 0.1;
-    var row = el("div", "change-row");
-    row.innerHTML = '<span class="change-stage" style="color:' + stg.color + '">' + stg.id + ' ' + stg.label + '</span>'
-      + '<span class="change-from" style="color:' + preLbl.color  + '">' + preLbl.label  + '</span>'
-      + '<span class="change-arrow">→</span>'
-      + '<span class="change-to"   style="color:' + postLbl.color + '">' + postLbl.label + '</span>'
-      + '<span class="change-tag"  style="color:' + (improved ? "#0CA678" : "#9CA3AF") + '">' + (improved ? "개선" : "유지") + '</span>';
-    card.appendChild(row);
+    var preS = preAvg[stg.id];
+    var postS = postAvg[stg.id];
+    var diff = preS - postS;
+    var preLbl = difficultyLabel(preS);
+    var postLbl = difficultyLabel(postS);
+
+    // 이 단계에서 어렵다고 느끼던 인원 (점수 ≥ 3) → 개선된 인원 (점수 ≤ 2.5)
+    var hardBefore = 0, easedAfter = 0;
+    bothFps.forEach(function(f) {
+      var pVal = getStageAvgs(f.pre.answers)[stg.id];
+      var qVal = getStageAvgs(f.post.answers)[stg.id];
+      if (pVal >= 3) {
+        hardBefore++;
+        if (qVal <= 2.5) easedAfter++;
+      }
+    });
+    var easedPct = hardBefore > 0 ? Math.round(easedAfter / hardBefore * 100) : 0;
+
+    var box = el("div", "compare-box");
+    var head = el("div", "compare-head");
+    head.innerHTML = '<span class="compare-stage" style="color:' + stg.color + '">' + stg.id + ' ' + stg.label + '</span>'
+      + '<span class="compare-delta" style="color:' + (diff > 0.1 ? "#0CA678" : "#9CA3AF") + '">'
+      + (diff > 0.1 ? '▼ ' + diff.toFixed(1) + ' 개선' : (diff < -0.1 ? '▲ ' + Math.abs(diff).toFixed(1) + ' 상승' : '변화 없음'))
+      + '</span>';
+    box.appendChild(head);
+
+    // Pre 막대
+    var preRow = el("div", "compare-row");
+    preRow.innerHTML = '<span class="compare-tp">교육 전</span>';
+    var preTrack = el("div", "compare-track");
+    var preFill = el("div", "compare-fill");
+    preFill.style.cssText = "width:" + (preS / 5 * 100) + "%;background:" + preLbl.color + ";opacity:0.55";
+    preTrack.appendChild(preFill);
+    preRow.appendChild(preTrack);
+    var preVal = el("span", "compare-val");
+    preVal.innerHTML = '<b>' + preS.toFixed(1) + '</b>';
+    preVal.style.color = preLbl.color;
+    preRow.appendChild(preVal);
+    box.appendChild(preRow);
+
+    // Post 막대
+    var postRow = el("div", "compare-row");
+    postRow.innerHTML = '<span class="compare-tp">직후</span>';
+    var postTrack = el("div", "compare-track");
+    var postFill = el("div", "compare-fill");
+    postFill.style.cssText = "width:" + (postS / 5 * 100) + "%;background:" + postLbl.color;
+    postTrack.appendChild(postFill);
+    postRow.appendChild(postTrack);
+    var postVal = el("span", "compare-val");
+    postVal.innerHTML = '<b>' + postS.toFixed(1) + '</b>';
+    postVal.style.color = postLbl.color;
+    postRow.appendChild(postVal);
+    box.appendChild(postRow);
+
+    // 인원 변화 강조
+    if (hardBefore > 0) {
+      var story = el("div", "compare-story");
+      if (easedAfter > 0) {
+        story.innerHTML = '어렵게 느끼던 <b>' + hardBefore + '명</b> 중 '
+          + '<b style="color:#0CA678">' + easedAfter + '명(' + easedPct + '%)</b>'
+          + '이 쉽게 느낀다고 응답';
+      } else {
+        story.innerHTML = '어렵게 느끼던 <b>' + hardBefore + '명</b>이 여전히 어려워합니다';
+        story.style.color = "#C92A2A";
+      }
+      box.appendChild(story);
+    } else {
+      var story2 = el("div", "compare-story");
+      story2.innerHTML = '교육 전부터 어려워하는 FP가 없던 단계입니다';
+      story2.style.color = "#9CA3AF";
+      box.appendChild(story2);
+    }
+
+    card.appendChild(box);
   });
 
-  // 전체 난이도 변화
+  // 전체 평균 (참고용 작은 한 줄)
   var preTotal  = totalAvg(preAvg);
   var postTotal = totalAvg(postAvg);
-  var preLbl  = difficultyLabel(preTotal);
-  var postLbl = difficultyLabel(postTotal);
-  var totalImproved = postTotal < preTotal - 0.1;
-
-  var totalBox = el("div", "total-change-box");
-  totalBox.innerHTML = '<div class="total-change-label">전체 난이도 변화</div>'
-    + '<div class="total-change-row">'
-    +   '<div class="total-change-side"><div class="total-change-val" style="color:' + preLbl.color  + '">' + preLbl.label  + '</div><div class="total-change-cap">교육 전</div></div>'
-    +   '<div class="total-change-arrow">→</div>'
-    +   '<div class="total-change-side"><div class="total-change-val" style="color:' + postLbl.color + '">' + postLbl.label + '</div><div class="total-change-cap">교육 직후</div></div>'
-    + '</div>'
-    + '<div class="total-change-tag" style="color:' + (totalImproved ? "#0CA678" : "#9CA3AF") + '">' + (totalImproved ? "난이도 감소 (개선)" : "변화 없음") + '</div>';
-  card.appendChild(totalBox);
+  var summaryLine = el("div", "total-summary-line");
+  summaryLine.innerHTML = '참고: 전체 평균 ' + preTotal.toFixed(1) + ' → ' + postTotal.toFixed(1);
+  card.appendChild(summaryLine);
 
   // 개선 현황 split bar
   card.appendChild(el("div", "subsection-title", "FP 개선 현황"));
@@ -1373,23 +1438,44 @@ function buildPostReport(bothFps) {
   splitLegend.innerHTML = '<span style="color:#0CA678">●</span> 개선 ' + improvedN + '명 (' + Math.round(iPct) + '%) &nbsp;&nbsp; <span style="color:#C92A2A">●</span> 미개선 ' + notImprovedN + '명 (' + (100 - Math.round(iPct)) + '%)';
   card.appendChild(splitLegend);
 
-  // 자동 해석
-  var biggestImproveStg = STAGES.reduce(function(best, s) {
-    var bd = preAvg[best.id] - postAvg[best.id];
-    var sd = preAvg[s.id]    - postAvg[s.id];
-    return sd > bd ? s : best;
+  // 자동 해석 — 단계별 인원 변화 중심
+  var stageStories = STAGES.map(function(stg) {
+    var hb = 0, ea = 0;
+    bothFps.forEach(function(f) {
+      var pVal = getStageAvgs(f.pre.answers)[stg.id];
+      var qVal = getStageAvgs(f.post.answers)[stg.id];
+      if (pVal >= 3) { hb++; if (qVal <= 2.5) ea++; }
+    });
+    return { stg: stg, hardBefore: hb, eased: ea };
   });
-  var smallestImproveStg = STAGES.reduce(function(best, s) {
-    var bd = preAvg[best.id] - postAvg[best.id];
-    var sd = preAvg[s.id]    - postAvg[s.id];
-    return sd < bd ? s : best;
+  // 가장 큰 변화 단계
+  var topImpact = stageStories.reduce(function(best, s) {
+    return s.eased > best.eased ? s : best;
   });
+  // 가장 적은 변화 단계 (어려운 사람 있는데 개선 못 된 단계)
+  var stuck = stageStories
+    .filter(function(s) { return s.hardBefore > 0; })
+    .reduce(function(worst, s) {
+      var wRate = worst ? worst.eased / worst.hardBefore : 1;
+      var sRate = s.eased / s.hardBefore;
+      return sRate < wRate ? s : worst;
+    }, null);
 
   var insight = el("div", "insight-box");
-  insight.innerHTML = '교육 후 전체 난이도가 <b>' + preLbl.label + '</b> → <b>' + postLbl.label + '</b>로 변화했습니다. '
-    + '특히 <b style="color:' + biggestImproveStg.color + '">' + biggestImproveStg.id + '단계(' + biggestImproveStg.label + ')</b>에서 가장 큰 개선을 보였습니다. '
-    + '다만 <b style="color:' + smallestImproveStg.color + '">' + smallestImproveStg.id + '단계(' + smallestImproveStg.label + ')</b>은 변화가 가장 적어 추가 보강이 필요합니다.<br><br>'
-    + bothFps.length + '명 중 <b>' + improvedN + '명(' + Math.round(iPct) + '%)</b>이 전반적인 개선을 보였습니다.';
+  var html = "";
+  if (topImpact.eased > 0) {
+    html += '✅ 가장 큰 변화: <b style="color:' + topImpact.stg.color + '">'
+      + topImpact.stg.id + '단계(' + topImpact.stg.label + ')</b>에서 어렵게 느끼던 '
+      + '<b>' + topImpact.hardBefore + '명</b> 중 '
+      + '<b style="color:#0CA678">' + topImpact.eased + '명</b>이 쉬워졌습니다.';
+  }
+  if (stuck && stuck.eased < stuck.hardBefore) {
+    html += '<br><br>⚠️ 보강 필요: <b style="color:' + stuck.stg.color + '">'
+      + stuck.stg.id + '단계(' + stuck.stg.label + ')</b>는 어렵게 느끼던 '
+      + '<b>' + stuck.hardBefore + '명</b> 중 '
+      + '<b style="color:#C92A2A">' + (stuck.hardBefore - stuck.eased) + '명</b>이 여전히 어려워합니다.';
+  }
+  insight.innerHTML = html || (bothFps.length + '명 중 ' + improvedN + '명이 개선을 보였습니다.');
   card.appendChild(insight);
 
   return card;
@@ -1403,36 +1489,116 @@ function buildFollowupReport(allFps) {
     + '<span class="step-tag" style="background:#E8470A14;color:#E8470A">3~4주 후</span>';
   card.appendChild(head);
 
-  card.appendChild(el("div", "report-note", "현장 정착도 (교육 직후 → 3~4주 후)"));
+  card.appendChild(el("div", "report-note", "현장 정착도 — 직후 효과가 3~4주 후에도 유지되는지 확인"));
 
   var postAvg = avgStageScore(allFps, "post");
   var fuAvg   = avgStageScore(allFps, "followup");
 
-  card.appendChild(el("div", "subsection-title", "단계별 정착도"));
+  card.appendChild(el("div", "subsection-title", "단계별 정착도 (직후 → 3~4주 후)"));
   STAGES.forEach(function(stg) {
-    var postLbl = difficultyLabel(postAvg[stg.id]);
-    var fuLbl   = difficultyLabel(fuAvg[stg.id]);
-    var rebound = fuAvg[stg.id] > postAvg[stg.id] + 0.3;
-    var tag = rebound ? "반등" : "유지";
-    var tagColor = rebound ? "#C92A2A" : "#0CA678";
-    var row = el("div", "change-row");
-    row.innerHTML = '<span class="change-stage" style="color:' + stg.color + '">' + stg.id + ' ' + stg.label + '</span>'
-      + '<span class="change-from" style="color:' + postLbl.color + '">' + postLbl.label + '</span>'
-      + '<span class="change-arrow">→</span>'
-      + '<span class="change-to"   style="color:' + fuLbl.color   + '">' + fuLbl.label   + '</span>'
-      + '<span class="change-tag"  style="color:' + tagColor + '">' + tag + '</span>';
-    card.appendChild(row);
+    var postS = postAvg[stg.id];
+    var fuS = fuAvg[stg.id];
+    var diff = fuS - postS;
+    var postLbl = difficultyLabel(postS);
+    var fuLbl = difficultyLabel(fuS);
+
+    // 직후 쉽게 느끼던 사람 중 다시 어려워진 사람
+    var easyAfter = 0, reboundN = 0;
+    allFps.forEach(function(f) {
+      var p = getStageAvgs(f.post.answers)[stg.id];
+      var q = getStageAvgs(f.followup.answers)[stg.id];
+      if (p <= 2.5) {
+        easyAfter++;
+        if (q >= 3) reboundN++;
+      }
+    });
+
+    var box = el("div", "compare-box");
+    var head = el("div", "compare-head");
+    var rebound = diff > 0.3;
+    head.innerHTML = '<span class="compare-stage" style="color:' + stg.color + '">' + stg.id + ' ' + stg.label + '</span>'
+      + '<span class="compare-delta" style="color:' + (rebound ? "#C92A2A" : "#0CA678") + '">'
+      + (rebound ? '▲ ' + diff.toFixed(1) + ' 반등' : '유지')
+      + '</span>';
+    box.appendChild(head);
+
+    var postRow = el("div", "compare-row");
+    postRow.innerHTML = '<span class="compare-tp">직후</span>';
+    var postTrack = el("div", "compare-track");
+    var postFill = el("div", "compare-fill");
+    postFill.style.cssText = "width:" + (postS / 5 * 100) + "%;background:" + postLbl.color + ";opacity:0.55";
+    postTrack.appendChild(postFill);
+    postRow.appendChild(postTrack);
+    var postVal = el("span", "compare-val");
+    postVal.innerHTML = '<b>' + postS.toFixed(1) + '</b>';
+    postVal.style.color = postLbl.color;
+    postRow.appendChild(postVal);
+    box.appendChild(postRow);
+
+    var fuRow = el("div", "compare-row");
+    fuRow.innerHTML = '<span class="compare-tp">3~4주 후</span>';
+    var fuTrack = el("div", "compare-track");
+    var fuFill = el("div", "compare-fill");
+    fuFill.style.cssText = "width:" + (fuS / 5 * 100) + "%;background:" + fuLbl.color;
+    fuTrack.appendChild(fuFill);
+    fuRow.appendChild(fuTrack);
+    var fuVal = el("span", "compare-val");
+    fuVal.innerHTML = '<b>' + fuS.toFixed(1) + '</b>';
+    fuVal.style.color = fuLbl.color;
+    fuRow.appendChild(fuVal);
+    box.appendChild(fuRow);
+
+    if (easyAfter > 0) {
+      var story = el("div", "compare-story");
+      if (reboundN > 0) {
+        story.innerHTML = '직후 쉽게 느끼던 <b>' + easyAfter + '명</b> 중 '
+          + '<b style="color:#C92A2A">' + reboundN + '명</b>이 현장에서 다시 어려움을 느낍니다';
+      } else {
+        story.innerHTML = '직후 쉽게 느끼던 <b>' + easyAfter + '명</b> 모두 현장에서도 잘 유지하고 있습니다';
+        story.style.color = "#0CA678";
+      }
+      box.appendChild(story);
+    }
+
+    card.appendChild(box);
   });
 
-  var fuTotal   = totalAvg(fuAvg);
-  var postTotal = totalAvg(postAvg);
-  var maintained = fuTotal <= postTotal + 0.3;
+  // 단계별 반등 인원 집계
+  var reboundStories = STAGES.map(function(stg) {
+    var ea = 0, rb = 0;
+    allFps.forEach(function(f) {
+      var p = getStageAvgs(f.post.answers)[stg.id];
+      var q = getStageAvgs(f.followup.answers)[stg.id];
+      if (p <= 2.5) { ea++; if (q >= 3) rb++; }
+    });
+    return { stg: stg, easyAfter: ea, rebound: rb };
+  });
+  var worstRebound = reboundStories.reduce(function(w, s) {
+    return s.rebound > w.rebound ? s : w;
+  });
+  var bestStable = reboundStories
+    .filter(function(s) { return s.easyAfter > 0; })
+    .reduce(function(b, s) {
+      var br = b ? b.rebound / b.easyAfter : 999;
+      var sr = s.rebound / s.easyAfter;
+      return sr < br ? s : b;
+    }, null);
 
   var insight = el("div", "insight-box");
-  insight.innerHTML = '3~4주 후 현장 점검 결과, 전체 난이도는 <b style="color:' + difficultyLabel(fuTotal).color + '">' + difficultyLabel(fuTotal).label + '</b> 수준입니다. '
-    + (maintained
-        ? '교육 직후 효과가 현장에서도 잘 유지되고 있습니다.'
-        : '일부 단계에서 어려움이 다시 나타나고 있어 보강 코칭이 필요합니다.');
+  var html = "";
+  if (worstRebound.rebound > 0) {
+    html += '⚠️ 가장 큰 반등: <b style="color:' + worstRebound.stg.color + '">'
+      + worstRebound.stg.id + '단계(' + worstRebound.stg.label + ')</b>에서 직후 쉽게 느끼던 '
+      + '<b>' + worstRebound.easyAfter + '명</b> 중 '
+      + '<b style="color:#C92A2A">' + worstRebound.rebound + '명</b>이 현장에서 다시 어려워합니다.';
+  }
+  if (bestStable && bestStable.rebound === 0 && bestStable.easyAfter > 0) {
+    html += (html ? '<br><br>' : '')
+      + '✅ 잘 정착: <b style="color:' + bestStable.stg.color + '">'
+      + bestStable.stg.id + '단계(' + bestStable.stg.label + ')</b>는 직후 쉽게 느끼던 '
+      + '<b>' + bestStable.easyAfter + '명</b> 모두 현장에서 잘 유지하고 있습니다.';
+  }
+  insight.innerHTML = html || '3~4주 후에도 큰 변화 없이 유지되고 있습니다.';
   card.appendChild(insight);
 
   return card;
