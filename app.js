@@ -67,6 +67,7 @@ var state = {
   // FP
   empId: "",
   branch: "",
+  fpName: "",
   timepoint: "",
   step: 0,
   answers: new Array(8).fill(0),
@@ -277,7 +278,7 @@ function buildInput() {
   fieldBranch.innerHTML = "<label>지점명</label>";
   var inputBranch = el("input");
   inputBranch.type = "text";
-  inputBranch.placeholder = "예) 은계지점";
+  inputBranch.placeholder = "예) 한화지점";
   inputBranch.value = state.branch;
   inputBranch.addEventListener("input", function(e) { state.branch = e.target.value.trim(); });
   fieldBranch.appendChild(inputBranch);
@@ -293,6 +294,16 @@ function buildInput() {
   inputEmp.addEventListener("input", function(e) { state.empId = e.target.value.replace(/\D/g, "").slice(0, 7); });
   fieldEmp.appendChild(inputEmp);
   wrap.appendChild(fieldEmp);
+
+  var fieldName = el("div", "field");
+  fieldName.innerHTML = "<label>이름</label>";
+  var inputName = el("input");
+  inputName.type = "text";
+  inputName.placeholder = "예) 김영수";
+  inputName.value = state.fpName;
+  inputName.addEventListener("input", function(e) { state.fpName = e.target.value.trim(); });
+  fieldName.appendChild(inputName);
+  wrap.appendChild(fieldName);
 
   var errDiv = el("div", "error");
   errDiv.id = "input-error";
@@ -316,6 +327,11 @@ function buildInput() {
     }
     if (!/^\d{7}$/.test(state.empId)) {
       state.error = "사번은 숫자 7자리로 입력하세요";
+      document.getElementById("input-error").textContent = state.error;
+      return;
+    }
+    if (!state.fpName) {
+      state.error = "이름을 입력하세요";
       document.getElementById("input-error").textContent = state.error;
       return;
     }
@@ -551,6 +567,7 @@ function submitResponse() {
     action: "submit",
     branch: state.branch,
     empId: state.empId,
+    name: state.fpName,
     timepoint: state.timepoint,
     answers: state.answers.slice(),
     bonusStage: state.bonusStage,
@@ -559,6 +576,12 @@ function submitResponse() {
     comment: state.comment,
     timestamp: new Date().toISOString(),
   };
+  // 다음 시점에 자동 채워지도록 저장
+  try {
+    localStorage.setItem("link_v2_fp_info", JSON.stringify({
+      branch: state.branch, empId: state.empId, fpName: state.fpName
+    }));
+  } catch(e) {}
   postData(data);
 }
 
@@ -1219,13 +1242,14 @@ function buildAdminBranchDetail() {
   var listCard = el("div", "chart-card");
   listCard.appendChild(el("div", "section-title", "개별 FP"));
   var table = el("table", "data-table");
-  table.innerHTML = '<thead><tr><th>사번</th><th>이름</th><th>진행</th></tr></thead>';
+  table.innerHTML = '<thead><tr><th>이름</th><th>사번</th><th>진행</th></tr></thead>';
   var tbody = el("tbody");
   fps.forEach(function(fp) {
     var tr = el("tr");
     tr.style.cursor = "pointer";
     var dots = (fp.pre ? "●" : "○") + " " + (fp.post ? "●" : "○") + " " + (fp.followup ? "●" : "○");
-    tr.innerHTML = '<td>' + fp.empId + '</td><td>' + fp.name + '</td><td class="fp-dots">' + dots + '</td>';
+    var displayName = fp.name && fp.name !== fp.empId ? fp.name : '(이름 미입력)';
+    tr.innerHTML = '<td><b>' + displayName + '</b></td><td style="color:#9CA3AF">' + fp.empId + '</td><td class="fp-dots">' + dots + '</td>';
     tr.addEventListener("click", function() {
       state.adminFP = { empId: fp.empId, name: fp.name, branch: b.name };
       fetchFPDetail(fp.empId, function() {
@@ -1671,7 +1695,8 @@ function buildFpGroups(allFps) {
   improved.forEach(function(e) {
     var stg = stageInfo(e.weakStage);
     var item = el("div", "fp-card");
-    item.innerHTML = '<div class="fp-card-head"><span class="fp-card-name">' + e.name + '</span><span class="fp-dots-mini">●●●</span></div>'
+    var displayName = e.name && e.name !== e.empId ? e.name : '(이름 미입력)';
+    item.innerHTML = '<div class="fp-card-head"><span class="fp-card-name">' + displayName + '</span><span class="fp-dots-mini">●●●</span></div>'
       + '<div class="fp-tag" style="background:' + stg.color + '14;color:' + stg.color + '">약점: ' + stg.id + '단계</div>'
       + '<div class="fp-card-score">' + e.preT.toFixed(1) + ' → ' + e.postT.toFixed(1) + ' → ' + e.fuT.toFixed(1) + ' (유지)</div>';
     goodCard.appendChild(item);
@@ -1689,7 +1714,8 @@ function buildFpGroups(allFps) {
     var stg = stageInfo(e.weakStage);
     var item = el("div", "fp-card");
     var changeLbl = e.fuT > e.postT + 0.3 ? "반등" : "변화 없음";
-    item.innerHTML = '<div class="fp-card-head"><span class="fp-card-name">' + e.name + '</span><span class="fp-dots-mini">●●○</span></div>'
+    var displayName = e.name && e.name !== e.empId ? e.name : '(이름 미입력)';
+    item.innerHTML = '<div class="fp-card-head"><span class="fp-card-name">' + displayName + '</span><span class="fp-dots-mini">●●○</span></div>'
       + '<div class="fp-tag" style="background:' + stg.color + '14;color:' + stg.color + '">약점: ' + stg.id + '단계</div>'
       + '<div class="fp-card-score">' + e.preT.toFixed(1) + ' → ' + e.postT.toFixed(1) + ' → ' + e.fuT.toFixed(1) + ' (' + changeLbl + ')</div>';
     badCard.appendChild(item);
@@ -1744,9 +1770,10 @@ function buildFPDetailScreen(mode) {
 
   // FP info
   var info = el("div", "chart-card");
-  var infoHtml = '<div style="font-size:14px;color:#8B95A5;margin-bottom:4px">사번: ' + (fp.empId || "") + '</div>';
-  infoHtml += '<div style="font-size:20px;font-weight:800;color:#1C2B5E;margin-bottom:4px">' + (fp.name || fp.empId) + '</div>';
-  if (fp.branch) infoHtml += '<div style="font-size:14px;color:#8B95A5">' + fp.branch + '</div>';
+  var displayName = fp.name && fp.name !== fp.empId ? fp.name : '(이름 미입력)';
+  var infoHtml = '<div style="font-size:28px;font-weight:900;color:#1C2B5E;margin-bottom:6px">' + displayName + '</div>';
+  if (fp.branch) infoHtml += '<div style="font-size:15px;color:#6B7280;margin-bottom:4px">' + fp.branch + '</div>';
+  infoHtml += '<div style="font-size:13px;color:#9CA3AF">사번 ' + (fp.empId || "") + '</div>';
   // Master data fields
   if (fp.grade) infoHtml += '<div style="font-size:13px;color:#8B95A5;margin-top:8px">성적단: ' + fp.grade + ' | 차월: ' + (fp.tenure || '-') + ' | 채널: ' + (fp.channel || '-') + '</div>';
   info.innerHTML = infoHtml;
@@ -2675,6 +2702,13 @@ function getManagerTimepointData() {
     if (!TIMEPOINTS[t]) t = "pre";
     state.timepoint = t;
     state.screen = "cover";
+    // 이전 입력 복원 (지점·사번·이름)
+    try {
+      var saved = JSON.parse(localStorage.getItem("link_v2_fp_info") || "{}");
+      if (saved.branch) state.branch = saved.branch;
+      if (saved.empId)  state.empId = saved.empId;
+      if (saved.fpName) state.fpName = saved.fpName;
+    } catch(e) {}
   }
   render();
 })();

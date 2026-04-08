@@ -17,7 +17,7 @@ var RESP_SHEET = "responses";
 var MASTER_SHEET = "master";
 
 var RESP_HEADERS = [
-  "timestamp", "empId", "branch", "timepoint",
+  "timestamp", "empId", "name", "branch", "timepoint",
   "Q1", "Q2", "Q3", "Q4", "Q5", "Q6", "Q7", "Q8",
   "bonusStage", "bonusApplied", "bonusReaction", "comment"
 ];
@@ -55,23 +55,6 @@ function doPost(e) {
   }
 }
 
-function handleSaveResponse(data) {
-  var sheet = getSheet(RESP_SHEET, RESP_HEADERS);
-  var a = data.answers || [];
-  sheet.appendRow([
-    data.timestamp || new Date().toISOString(),
-    String(data.empId),
-    data.branch || "",
-    data.timepoint || "",
-    a[0] || "", a[1] || "", a[2] || "", a[3] || "",
-    a[4] || "", a[5] || "", a[6] || "", a[7] || "",
-    data.bonusStage || "",
-    (data.bonusApplied || []).join("|"),
-    data.bonusReaction || "",
-    data.comment || ""
-  ]);
-  return jsonOut({ success: true });
-}
 
 function handleUploadMaster(data) {
   var sheet = getSheet(MASTER_SHEET, MASTER_HEADERS);
@@ -128,25 +111,66 @@ function doGet(e) {
 function readAllResponses() {
   var sheet = getSheet(RESP_SHEET, RESP_HEADERS);
   if (sheet.getLastRow() < 2) return [];
-  var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 16).getValues();
+  var lastCol = sheet.getLastColumn();
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  // 헤더에 name 컬럼이 없으면 자동 추가 (마이그레이션)
+  if (headers.indexOf("name") === -1) {
+    sheet.insertColumnAfter(2); // empId 다음
+    sheet.getRange(1, 3).setValue("name");
+    headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  }
+  // 헤더 → 인덱스 매핑
+  var idx = {};
+  headers.forEach(function (h, i) { idx[h] = i; });
+  var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues();
   return data.map(function (row) {
     return {
-      timestamp: row[0],
-      empId: String(row[1]),
-      branch: String(row[2]),
-      timepoint: String(row[3]),
+      timestamp:    row[idx.timestamp],
+      empId:        String(row[idx.empId]),
+      name:         String(row[idx.name] || ""),
+      branch:       String(row[idx.branch] || ""),
+      timepoint:    String(row[idx.timepoint] || ""),
       answers: [
-        Number(row[4]) || 0, Number(row[5]) || 0,
-        Number(row[6]) || 0, Number(row[7]) || 0,
-        Number(row[8]) || 0, Number(row[9]) || 0,
-        Number(row[10]) || 0, Number(row[11]) || 0
+        Number(row[idx.Q1]) || 0, Number(row[idx.Q2]) || 0,
+        Number(row[idx.Q3]) || 0, Number(row[idx.Q4]) || 0,
+        Number(row[idx.Q5]) || 0, Number(row[idx.Q6]) || 0,
+        Number(row[idx.Q7]) || 0, Number(row[idx.Q8]) || 0
       ],
-      bonusStage: String(row[12] || ""),
-      bonusApplied: row[13] ? String(row[13]).split("|").filter(Boolean) : [],
-      bonusReaction: String(row[14] || ""),
-      comment: String(row[15] || "")
+      bonusStage:    String(row[idx.bonusStage] || ""),
+      bonusApplied:  row[idx.bonusApplied] ? String(row[idx.bonusApplied]).split("|").filter(Boolean) : [],
+      bonusReaction: String(row[idx.bonusReaction] || ""),
+      comment:       String(row[idx.comment] || "")
     };
   });
+}
+
+function handleSaveResponse(data) {
+  var sheet = getSheet(RESP_SHEET, RESP_HEADERS);
+  // 헤더 기반으로 안전하게 저장
+  var lastCol = sheet.getLastColumn();
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  if (headers.indexOf("name") === -1) {
+    sheet.insertColumnAfter(2);
+    sheet.getRange(1, 3).setValue("name");
+    headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  }
+  var a = data.answers || [];
+  var rowMap = {
+    timestamp: data.timestamp || new Date().toISOString(),
+    empId: String(data.empId),
+    name: data.name || "",
+    branch: data.branch || "",
+    timepoint: data.timepoint || "",
+    Q1: a[0] || "", Q2: a[1] || "", Q3: a[2] || "", Q4: a[3] || "",
+    Q5: a[4] || "", Q6: a[5] || "", Q7: a[6] || "", Q8: a[7] || "",
+    bonusStage: data.bonusStage || "",
+    bonusApplied: (data.bonusApplied || []).join("|"),
+    bonusReaction: data.bonusReaction || "",
+    comment: data.comment || ""
+  };
+  var row = headers.map(function (h) { return rowMap[h] !== undefined ? rowMap[h] : ""; });
+  sheet.appendRow(row);
+  return jsonOut({ success: true });
 }
 
 function readMasterMap() {
@@ -400,7 +424,8 @@ function getExportData() {
         bonusApplied: r.bonusApplied.join("|"),
         bonusReaction: r.bonusReaction,
         comment: r.comment,
-        name: m.name || "", grade: m.grade || "",
+        name: r.name || m.name || "",
+        grade: m.grade || "",
         tenure: m.tenure || "", age: m.age || "",
         gender: m.gender || "", channel: m.channel || ""
       };
