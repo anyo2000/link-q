@@ -39,7 +39,7 @@ var BONUS_APPLIED_OPTIONS = [
 
 var GAS_URL = "https://script.google.com/macros/s/AKfycbzhkQyGbLI67jGRjJnZLx90df7i5-cQ8-E1VHvVtusjShE6IbqnOoXx06sgEMdNoZapFQ/exec";
 
-var ADMIN_IDS = ["8089446"];
+var ADMIN_IDS = ["1234567"];
 
 var STAGE_COLORS = { L: "#3B5BDB", I: "#0CA678", N: "#E8470A", K: "#C92A2A" };
 
