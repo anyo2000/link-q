@@ -576,10 +576,10 @@ function submitResponse() {
     comment: state.comment,
     timestamp: new Date().toISOString(),
   };
-  // 다음 시점에 자동 채워지도록 저장
+  // 다음 시점에 지점·사번만 자동 채워지도록 저장 (이름 제외)
   try {
     localStorage.setItem("link_v2_fp_info", JSON.stringify({
-      branch: state.branch, empId: state.empId, fpName: state.fpName
+      branch: state.branch, empId: state.empId
     }));
   } catch(e) {}
   postData(data);
@@ -2756,13 +2756,13 @@ function getManagerTimepointData() {
     if (!TIMEPOINTS[t]) t = "pre";
     state.timepoint = t;
     state.screen = "cover";
-    // 이전 입력 복원 (지점·사번·이름)
+    // 이전 입력 복원 (지점·사번만, 이름은 매번 새로 입력)
     try {
       var saved = JSON.parse(localStorage.getItem("link_v2_fp_info") || "{}");
       if (saved.branch) state.branch = saved.branch;
       if (saved.empId)  state.empId = saved.empId;
-      if (saved.fpName) state.fpName = saved.fpName;
     } catch(e) {}
+    state.fpName = "";
   }
   render();
 })();
