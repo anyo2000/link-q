@@ -301,6 +301,15 @@ function buildInput() {
   var btn = el("button", "btn-full", "다음 →");
   btn.style.marginTop = "28px";
   btn.addEventListener("click", function() {
+    // 관리자 사번이면 지점명 무시하고 바로 관리자 대시보드로
+    if (ADMIN_IDS.indexOf(state.empId) !== -1) {
+      state.error = null;
+      state.mode = "admin";
+      state.loading = true;
+      navigate("admin");
+      fetchAdminData();
+      return;
+    }
     if (!state.branch) {
       state.error = "지점명을 입력하세요";
       document.getElementById("input-error").textContent = state.error;
