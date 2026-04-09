@@ -1,0 +1,10 @@
+{
+  "name": "link-q",
+  "private": true,
+  "scripts": {
+    "push": "cd gas && clasp push",
+    "pull": "cd gas && clasp pull",
+    "open": "cd gas && clasp open-script",
+    "gas": "cd gas && clasp push && open 'https://script.google.com/d/1WJGrGFYxrvTDHhl8knlSYL7hHbLdMRHF-rkrr-01b0cZbtJkSNHG42Rp/edit'"
+  }
+}

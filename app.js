@@ -279,6 +279,8 @@ function buildInput() {
   var inputBranch = el("input");
   inputBranch.type = "text";
   inputBranch.placeholder = "예) 한화지점";
+  inputBranch.setAttribute("autocomplete", "off");
+  inputBranch.setAttribute("name", "link-branch-" + Date.now());
   inputBranch.value = state.branch;
   inputBranch.addEventListener("input", function(e) { state.branch = e.target.value.trim(); });
   fieldBranch.appendChild(inputBranch);
@@ -290,6 +292,8 @@ function buildInput() {
   inputEmp.type = "tel";
   inputEmp.placeholder = "예) 1234567";
   inputEmp.maxLength = 7;
+  inputEmp.setAttribute("autocomplete", "off");
+  inputEmp.setAttribute("name", "link-emp-" + Date.now());
   inputEmp.value = state.empId;
   inputEmp.addEventListener("input", function(e) { state.empId = e.target.value.replace(/\D/g, "").slice(0, 7); });
   fieldEmp.appendChild(inputEmp);
@@ -299,7 +303,8 @@ function buildInput() {
   fieldName.innerHTML = "<label>이름</label>";
   var inputName = el("input");
   inputName.type = "text";
-  inputName.placeholder = "예) 김영수";
+  inputName.setAttribute("autocomplete", "off");
+  inputName.setAttribute("name", "link-name-" + Date.now());
   inputName.value = state.fpName;
   inputName.addEventListener("input", function(e) { state.fpName = e.target.value.trim(); });
   fieldName.appendChild(inputName);
@@ -576,12 +581,6 @@ function submitResponse() {
     comment: state.comment,
     timestamp: new Date().toISOString(),
   };
-  // 다음 시점에 지점·사번만 자동 채워지도록 저장 (이름 제외)
-  try {
-    localStorage.setItem("link_v2_fp_info", JSON.stringify({
-      branch: state.branch, empId: state.empId
-    }));
-  } catch(e) {}
   postData(data);
 }
 
@@ -2776,12 +2775,7 @@ function getManagerTimepointData() {
     if (!TIMEPOINTS[t]) t = "pre";
     state.timepoint = t;
     state.screen = "cover";
-    // 이전 입력 복원 (지점·사번만, 이름은 매번 새로 입력)
-    try {
-      var saved = JSON.parse(localStorage.getItem("link_v2_fp_info") || "{}");
-      if (saved.branch) state.branch = saved.branch;
-      if (saved.empId)  state.empId = saved.empId;
-    } catch(e) {}
+    // 자동 복원 없음 — 매번 새로 입력
     state.fpName = "";
   }
   render();

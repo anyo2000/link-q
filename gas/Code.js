@@ -408,6 +408,128 @@ function getFPDetail(empId) {
   };
 }
 
+// ── 1회성: 전체 더미데이터 재생성 ──────────────────
+// responses 시트 전체 비우고 한강지점 30명 + 한국지점 10명 × 3시점 삽입
+// 각 FP는 pre > post > followup 로 개선되는 개별 트래젝토리를 가짐
+// Apps Script 에디터에서 regenerateAllDummy() 직접 실행
+function regenerateAllDummy() {
+  var BRANCHES = [
+    { name: "한강지점", fpCount: 30 },
+    { name: "한국지점", fpCount: 10 }
+  ];
+
+  var SURNAMES = ["김","이","박","최","정","강","조","윤","장","임","한","오","서","신","권","황","안","송","류","전","홍","문","양","배","백","허","남","심","노","하"];
+  var GIVEN = ["지훈","서연","민준","예린","현우","수빈","도윤","하은","시우","지민","준호","유진","재원","소율","건우","나윤","태현","채원","성민","다은","우진","예나","동현","가은","승우","보민","윤호","지유","재현","혜린","상원","미래","승준","예림","찬호","소정","경호","한별","도경","유나"];
+
+  function pick(arr) { return arr[Math.floor(Math.random()*arr.length)]; }
+  function randInt(lo, hi) { return Math.floor(lo + Math.random()*(hi-lo+1)); }
+  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+  var sheet = getSheet(RESP_SHEET, RESP_HEADERS);
+  var lastCol = sheet.getLastColumn();
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  if (headers.indexOf("name") === -1) {
+    sheet.insertColumnAfter(2);
+    sheet.getRange(1, 3).setValue("name");
+    headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    lastCol = sheet.getLastColumn();
+  }
+
+  // 1) 전체 응답 행 삭제 (헤더만 유지)
+  var deleted = 0;
+  if (sheet.getLastRow() > 1) {
+    deleted = sheet.getLastRow() - 1;
+    sheet.getRange(2, 1, deleted, lastCol).clear();
+  }
+
+  // 2) FP별 트래젝토리 기반 답변 생성
+  // 점수 1~5, 낮을수록 잘함(쉬움). pre > post > followup 되도록 설계
+  //
+  // 각 FP는 target 난이도 3개(pre/post/followup)를 먼저 정하고,
+  // 8문항을 그 target 주변 노이즈로 뿌려서 정수(1~5)로 반올림.
+  function genFpAnswers() {
+    // pre: 2.8 ~ 3.8 (대부분 어렵다고 응답)
+    var preTarget = 2.8 + Math.random() * 1.0;
+    // 개선폭: 0.9 ~ 1.6
+    var improve = 0.9 + Math.random() * 0.7;
+    var postTarget = clamp(preTarget - improve, 1.1, 5);
+    // followup: 대부분 유지(80%), 일부 반등(15%), 추가개선(5%)
+    var roll = Math.random();
+    var fuDelta;
+    if (roll < 0.80)      fuDelta = (Math.random() - 0.5) * 0.3;  // 유지: ±0.15
+    else if (roll < 0.95) fuDelta = 0.3 + Math.random() * 0.5;    // 반등: +0.3 ~ +0.8
+    else                  fuDelta = -(0.1 + Math.random() * 0.3); // 추가개선
+    var fuTarget = clamp(postTarget + fuDelta, 1.0, 5);
+
+    function answersFor(target) {
+      var arr = [];
+      for (var q = 0; q < 8; q++) {
+        var noise = (Math.random() - 0.5) * 1.0; // ±0.5
+        arr.push(clamp(Math.round(target + noise), 1, 5));
+      }
+      return arr;
+    }
+
+    return {
+      pre: answersFor(preTarget),
+      post: answersFor(postTarget),
+      followup: answersFor(fuTarget)
+    };
+  }
+
+  var STAGES = ["L","I","N","K"];
+  var APPLIED_OPTIONS = ["고객 질문에 자신감","클로징 멘트 활용","니즈 탐색 강화","반론 대응 개선"];
+  var REACTIONS = ["positive","positive","positive","neutral","negative"];
+
+  var usedEmp = {};
+  var usedName = {};
+  var newRows = [];
+  var baseTs = Date.now() - 21*24*60*60*1000;
+  var tsOffset = 0;
+
+  BRANCHES.forEach(function(br) {
+    for (var i = 0; i < br.fpCount; i++) {
+      var eid;
+      do { eid = String(1000000 + Math.floor(Math.random()*9000000)); } while (usedEmp[eid]);
+      usedEmp[eid] = true;
+
+      var nm;
+      do { nm = pick(SURNAMES) + pick(GIVEN); } while (usedName[nm]);
+      usedName[nm] = true;
+
+      var answers = genFpAnswers();
+
+      ["pre","post","followup"].forEach(function(tp) {
+        var ts = new Date(baseTs + (tsOffset++)*60*60*1000).toISOString();
+        var ans = answers[tp];
+        var bonusStage = tp === "post" ? pick(STAGES) : "";
+        var bonusApplied = "";
+        var bonusReaction = "";
+        if (tp === "followup") {
+          var k = randInt(1, 3);
+          var shuffled = APPLIED_OPTIONS.slice().sort(function(){ return Math.random() - 0.5; });
+          bonusApplied = shuffled.slice(0, k).join("|");
+          bonusReaction = pick(REACTIONS);
+        }
+        var rowMap = {
+          timestamp: ts, empId: eid, name: nm, branch: br.name, timepoint: tp,
+          Q1: ans[0], Q2: ans[1], Q3: ans[2], Q4: ans[3],
+          Q5: ans[4], Q6: ans[5], Q7: ans[6], Q8: ans[7],
+          bonusStage: bonusStage, bonusApplied: bonusApplied,
+          bonusReaction: bonusReaction, comment: ""
+        };
+        newRows.push(headers.map(function(h){ return rowMap[h] !== undefined ? rowMap[h] : ""; }));
+      });
+    }
+  });
+
+  if (newRows.length > 0) {
+    sheet.getRange(2, 1, newRows.length, headers.length).setValues(newRows);
+  }
+
+  return "deleted " + deleted + " rows, inserted " + newRows.length + " rows (한강 30명, 한국 10명)";
+}
+
 // ── API: 전체 데이터 내보내기 ────────────────────────
 function getExportData() {
   var responses = readAllResponses();
