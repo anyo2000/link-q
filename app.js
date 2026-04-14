@@ -1450,20 +1450,10 @@ function buildPreReport(b, preFps, allAvgs) {
   card.appendChild(diagBox);
 
   // ════════════════════════════════════════════════════
-  // ② 단계별 난이도 — 해석 → 도표
+  // ② 단계별 난이도 — 제목 → 도표 → 해설
   // ════════════════════════════════════════════════════
   card.appendChild(buildScaleLegend());
-
-  // 해석 먼저
-  var avgInterpret = el("div", "report-note");
-  avgInterpret.innerHTML = preFps.length + '명의 FP가 각 단계를 얼마나 어렵게 느끼는지 평균 점수입니다. '
-    + '<b style="color:' + hardestStg.color + '">' + hardestStg.id + '(' + hardestStg.label + ')</b>가 '
-    + '<b>' + avgs[hardestStg.id].toFixed(1) + '점</b>으로 가장 높고, '
-    + '<b style="color:' + easiestStg.color + '">' + easiestStg.id + '(' + easiestStg.label + ')</b>가 '
-    + '<b>' + avgs[easiestStg.id].toFixed(1) + '점</b>으로 가장 낮습니다.';
-  card.appendChild(avgInterpret);
-
-  card.appendChild(el("div", "subsection-title", "단계별 난이도 (지점 평균)"));
+  card.appendChild(el("div", "section-title", "단계별 난이도"));
   STAGES.forEach(function(stg) {
     var score = avgs[stg.id];
     var diff = difficultyLabel(score);
@@ -1484,8 +1474,17 @@ function buildPreReport(b, preFps, allAvgs) {
     card.appendChild(row);
   });
 
+  // 해설
+  var avgInterpret = el("div", "report-note");
+  avgInterpret.innerHTML = preFps.length + '명의 FP가 각 단계를 얼마나 어렵게 느끼는지 평균 점수입니다. '
+    + '<b style="color:' + hardestStg.color + '">' + hardestStg.id + '(' + hardestStg.label + ')</b>가 '
+    + '<b>' + avgs[hardestStg.id].toFixed(1) + '점</b>으로 가장 어렵고, '
+    + '<b style="color:' + easiestStg.color + '">' + easiestStg.id + '(' + easiestStg.label + ')</b>가 '
+    + '<b>' + avgs[easiestStg.id].toFixed(1) + '점</b>으로 가장 쉽습니다.';
+  card.appendChild(avgInterpret);
+
   // ════════════════════════════════════════════════════
-  // ③ 코칭 우선순위 — 해석 → 도표 → FP 이름
+  // ③ 코칭 우선순위 — 제목 → 도표 + FP 이름 → 해설
   // ════════════════════════════════════════════════════
   var coachPriority = STAGES.map(function(stg) {
     var hc = hardCount[stg.id];
@@ -1495,15 +1494,7 @@ function buildPreReport(b, preFps, allAvgs) {
 
   var topCoach = coachPriority[0];
 
-  // 해석
-  var coachInterpret = el("div", "report-note");
-  coachInterpret.style.marginTop = "32px";
-  coachInterpret.innerHTML = '4~5점(어렵다)을 고른 FP 수입니다. '
-    + '<b style="color:' + topCoach.stg.color + '">' + topCoach.stg.id + '(' + topCoach.stg.label + ')</b> 단계에서 '
-    + preFps.length + '명 중 <b>' + topCoach.count + '명(' + topCoach.pct + '%)</b>이 어려움을 느끼고 있어 코칭 1순위입니다.';
-  card.appendChild(coachInterpret);
-
-  card.appendChild(el("div", "subsection-title", "코칭 우선순위"));
+  card.appendChild(el("div", "section-title", "코칭 우선순위"));
   var rank = 0;
   coachPriority.forEach(function(cp) {
     if (cp.count === 0) return;
@@ -1537,18 +1528,17 @@ function buildPreReport(b, preFps, allAvgs) {
     }
   });
 
-  // ════════════════════════════════════════════════════
-  // ④ FP별 최약점 — 해석 → 도표
-  // ════════════════════════════════════════════════════
-  var weakInterpret = el("div", "report-note");
-  weakInterpret.style.marginTop = "32px";
-  var topWeakPct = preFps.length > 0 ? Math.round(weakCount[topWeakStg.id] / preFps.length * 100) : 0;
-  weakInterpret.innerHTML = '각 FP에게 4단계 중 가장 어려운 1개를 물었을 때의 분포입니다. '
-    + '<b style="color:' + topWeakStg.color + '">' + topWeakStg.id + '(' + topWeakStg.label + ')</b>를 꼽은 FP가 '
-    + '<b>' + weakCount[topWeakStg.id] + '명(' + topWeakPct + '%)</b>으로 가장 많습니다.';
-  card.appendChild(weakInterpret);
+  // 해설
+  var coachInterpret = el("div", "report-note");
+  coachInterpret.innerHTML = '4~5점(어렵다)을 고른 FP 수입니다. '
+    + '<b style="color:' + topCoach.stg.color + '">' + topCoach.stg.id + '(' + topCoach.stg.label + ')</b> 단계에서 '
+    + preFps.length + '명 중 <b>' + topCoach.count + '명(' + topCoach.pct + '%)</b>이 어려움을 느끼고 있어 코칭 1순위입니다.';
+  card.appendChild(coachInterpret);
 
-  card.appendChild(el("div", "subsection-title", "FP별 최약점 분포"));
+  // ════════════════════════════════════════════════════
+  // ④ FP별 최약점 — 제목 → 도표 → 해설
+  // ════════════════════════════════════════════════════
+  card.appendChild(el("div", "section-title", "FP별 최약점 분포"));
   var maxCount = Math.max(weakCount.L, weakCount.I, weakCount.N, weakCount.K);
   STAGES.forEach(function(stg) {
     var c = weakCount[stg.id];
@@ -1570,8 +1560,16 @@ function buildPreReport(b, preFps, allAvgs) {
     card.appendChild(row);
   });
 
+  // 해설
+  var weakInterpret = el("div", "report-note");
+  var topWeakPct = preFps.length > 0 ? Math.round(weakCount[topWeakStg.id] / preFps.length * 100) : 0;
+  weakInterpret.innerHTML = '각 FP에게 4단계 중 가장 어려운 1개를 물었을 때의 분포입니다. '
+    + '<b style="color:' + topWeakStg.color + '">' + topWeakStg.id + '(' + topWeakStg.label + ')</b>를 꼽은 FP가 '
+    + '<b>' + weakCount[topWeakStg.id] + '명(' + topWeakPct + '%)</b>으로 가장 많습니다.';
+  card.appendChild(weakInterpret);
+
   // ════════════════════════════════════════════════════
-  // ⑤ 집중 케어 필요 FP
+  // ⑤ 집중 케어 필요 FP — 제목 → 이름 → 해설
   // ════════════════════════════════════════════════════
   var dangerFps = [];
   preFps.forEach(function(f) {
@@ -1580,16 +1578,15 @@ function buildPreReport(b, preFps, allAvgs) {
     if (allHard) dangerFps.push(f.name || f.empId);
   });
   if (dangerFps.length > 0) {
-    var dangerInterpret = el("div", "report-note");
-    dangerInterpret.style.marginTop = "32px";
-    dangerInterpret.innerHTML = '아래 FP는 <b>모든 단계에서 4~5점</b>을 선택했습니다. 특정 단계가 아니라 전반적인 케어가 필요합니다.';
-    card.appendChild(dangerInterpret);
-
-    card.appendChild(el("div", "subsection-title", "집중 케어 필요 FP"));
+    card.appendChild(el("div", "section-title", "집중 케어 필요 FP"));
     var dangerList = el("div");
     dangerList.style.cssText = "font-size:17px;font-weight:700;color:#1C2B5E;padding:8px 0";
     dangerList.textContent = dangerFps.join(", ");
     card.appendChild(dangerList);
+
+    var dangerInterpret = el("div", "report-note");
+    dangerInterpret.innerHTML = '위 FP는 <b>모든 단계에서 4~5점</b>을 선택했습니다. 특정 단계가 아니라 전반적인 케어가 필요합니다.';
+    card.appendChild(dangerInterpret);
   }
 
   return card;

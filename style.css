@@ -677,6 +677,12 @@ h2 {
   color: #1C2B5E; margin-bottom: 16px;
   letter-spacing: 0.3px;
 }
+.report-section .section-title {
+  font-size: 20px; font-weight: 800;
+  color: #1C2B5E; margin: 40px 0 16px;
+  padding-top: 28px;
+  border-top: 2px solid #E5E7EB;
+}
 .subsection-title {
   font-size: 16px; font-weight: 800;
   color: #1C2B5E; margin: 36px 0 18px;
