@@ -1179,8 +1179,8 @@ function pickBranchDisplayName(names) {
   var hasSfp = false;
   names.forEach(function(n) {
     var clean = String(n).replace(/\s+/g, "");
-    if (/sfp$/i.test(clean)) hasSfp = true;
-    var b = clean.replace(/(지점|SFP|sfp|점)$/i, "");
+    if (/sfp/i.test(clean)) hasSfp = true;
+    var b = clean.replace(/(SFP지점|SFP|sfp|지점|동|점)$/i, "");
     if (!base || b.length > base.length) base = b;
   });
   return base + (hasSfp ? "SFP지점" : "지점");
@@ -2886,7 +2886,8 @@ function computeTimepointAverages(responses) {
 
 function getBranchTimepointData(branch) {
   var data = state.adminData || { responses: [] };
-  var responses = (data.responses || []).filter(function(r) { return r.branch === branch.name; });
+  var bKey = branch.key || normalizeBranch(branch.name);
+  var responses = (data.responses || []).filter(function(r) { return normalizeBranch(r.branch) === bKey; });
   return computeTimepointAverages(responses);
 }
 
