@@ -1490,14 +1490,14 @@ function buildPreReport(b, preFps, allAvgs) {
   // ① 한 줄 진단
   var insight = el("div", "insight-box");
   var diagHtml = '<div class="insight-title">우리 지점 진단</div>'
-    + '<div class="insight-line" style="font-size:18px;line-height:1.6">'
-    +   '우리 지점은 <span style="color:' + hardestStg.color + ';font-weight:800;font-size:22px">'
+    + '<div class="insight-line" style="font-size:20px;line-height:1.6">'
+    +   '우리 지점은 <span style="color:' + hardestStg.color + ';font-weight:800;font-size:24px">'
     +     hardestStg.id + '(' + hardestStg.label + ') 단계</span>를 가장 어려워합니다.'
     + '</div>';
 
   // ② 전체 대비 특이점 (특별히 높거나 낮을 때만)
   if (allAvgs) {
-    var THRESHOLD = 0.3; // 전체 평균 대비 ±0.3 이상 차이나면 언급
+    var THRESHOLD = 0.3;
     var highStgs = [];
     var lowStgs = [];
     STAGES.forEach(function(stg) {
@@ -1507,19 +1507,19 @@ function buildPreReport(b, preFps, allAvgs) {
     });
     if (highStgs.length > 0) {
       highStgs.sort(function(a, b) { return b.diff - a.diff; });
-      diagHtml += '<div class="insight-line" style="color:#C92A2A">'
-        + '⚠ 전체 평균보다 특히 어려워하는 단계: '
+      diagHtml += '<div class="insight-line">'
+        + '전체 평균보다 특히 어려워하는 단계: '
         + highStgs.map(function(h) {
-          return '<b>' + h.stg.id + '(' + h.stg.label + ')</b> +' + h.diff.toFixed(1);
+          return '<b style="color:' + h.stg.color + '">' + h.stg.id + '(' + h.stg.label + ')</b> +' + h.diff.toFixed(1);
         }).join(', ')
         + '</div>';
     }
     if (lowStgs.length > 0) {
       lowStgs.sort(function(a, b) { return b.diff - a.diff; });
-      diagHtml += '<div class="insight-line" style="color:#0CA678">'
-        + '✓ 전체 평균보다 자신있는 단계: '
+      diagHtml += '<div class="insight-line">'
+        + '전체 평균보다 자신있는 단계: '
         + lowStgs.map(function(l) {
-          return '<b>' + l.stg.id + '(' + l.stg.label + ')</b> -' + l.diff.toFixed(1);
+          return '<b style="color:' + l.stg.color + '">' + l.stg.id + '(' + l.stg.label + ')</b> -' + l.diff.toFixed(1);
         }).join(', ')
         + '</div>';
     }
@@ -1538,13 +1538,13 @@ function buildPreReport(b, preFps, allAvgs) {
     coachHtml += '<div class="insight-line">'
       + '<b style="color:' + cp.stg.color + '">' + rank + '순위 ' + cp.stg.id + ' ' + cp.stg.label + '</b>'
       + ' — ' + cp.count + '명(' + cp.pct + '%)이 어려워함<br>'
-      + '<span style="font-size:14px;color:#6B7280">해당 FP: ' + cp.fpNames.join(', ') + '</span>'
+      + '<span style="font-size:14px;color:#9CA3AF">해당 FP: ' + cp.fpNames.join(', ') + '</span>'
       + '</div>';
   });
   coachCard.innerHTML = coachHtml;
   card.appendChild(coachCard);
 
-  // ④ 위험 FP (모든 단계에서 4~5점인 FP)
+  // ④ 집중 케어 FP (모든 단계에서 4~5점인 FP)
   var dangerFps = [];
   preFps.forEach(function(f) {
     var sa = getStageAvgs(f.pre.answers);
@@ -1554,10 +1554,10 @@ function buildPreReport(b, preFps, allAvgs) {
   if (dangerFps.length > 0) {
     var dangerBox = el("div", "insight-box");
     dangerBox.style.marginTop = "12px";
-    dangerBox.innerHTML = '<div class="insight-title" style="color:#C92A2A">⚠ 집중 케어 필요 FP</div>'
+    dangerBox.innerHTML = '<div class="insight-title">집중 케어 필요 FP</div>'
       + '<div class="insight-line">'
       + '모든 단계에서 어려움을 느끼는 FP입니다. 전반적인 케어가 필요합니다.<br>'
-      + '<b style="font-size:16px">' + dangerFps.join(', ') + '</b>'
+      + '<b style="font-size:17px">' + dangerFps.join(', ') + '</b>'
       + '</div>';
     card.appendChild(dangerBox);
   }
@@ -1738,10 +1738,10 @@ function buildPostReport(bothFps) {
       if (pVal >= 3 && qVal > 2.5) stillHardNames.push(f.name || f.empId);
     });
     html += '<div class="insight-line">'
-      + '<b style="color:#C92A2A">추가 코칭이 필요한 단계</b><br>'
+      + '<b>추가 코칭이 필요한 단계</b><br>'
       + '<span style="color:' + stuck.stg.color + ';font-weight:800;font-size:18px">'
       + stuck.stg.id + '(' + stuck.stg.label + ')</span> — '
-      + '아직 <b style="font-size:20px;color:#C92A2A">' + stuckRemain + '명</b>이 어려워합니다<br>'
+      + '아직 <b style="font-size:20px">' + stuckRemain + '명</b>이 어려워합니다<br>'
       + (stillHardNames.length > 0
         ? '<span style="font-size:14px;color:#6B7280">해당 FP: ' + stillHardNames.join(', ') + '</span>'
         : '')

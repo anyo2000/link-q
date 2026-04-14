@@ -804,31 +804,29 @@ h2 {
   font-weight: 600;
 }
 .insight-box {
-  background: linear-gradient(135deg, #FFF9F5 0%, #FFF3EC 100%);
-  border: 2px solid #FFE0CC;
-  border-left: 5px solid #E8470A;
+  background: #F8F9FC;
   border-radius: 14px;
-  padding: 22px 22px;
+  padding: 28px 24px;
   font-size: 17px;
-  color: #1C2B5E;
+  color: #374151;
   line-height: 1.85;
-  margin-top: 36px;
+  margin-top: 24px;
   font-weight: 500;
 }
-.insight-box b { font-weight: 800; }
+.insight-box b { font-weight: 800; color: #1C2B5E; }
 .insight-title {
-  font-size: 14px;
+  font-size: 20px;
   font-weight: 800;
-  color: #E8470A;
-  letter-spacing: 1px;
-  margin-bottom: 18px;
-  text-align: center;
-  padding-bottom: 14px;
-  border-bottom: 1.5px dashed #FFD0B5;
+  color: #1C2B5E;
+  letter-spacing: 0;
+  margin-bottom: 20px;
+  text-align: left;
+  padding-bottom: 0;
+  border-bottom: none;
 }
 .insight-line {
-  padding: 14px 0;
-  border-bottom: 1px dashed #FFD0B5;
+  padding: 12px 0;
+  border-bottom: 1px solid #E5E7EB;
   font-size: 16px;
   line-height: 1.7;
 }
