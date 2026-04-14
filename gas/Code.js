@@ -530,6 +530,28 @@ function regenerateAllDummy() {
   return "deleted " + deleted + " rows, inserted " + newRows.length + " rows (한강 30명, 한국 10명)";
 }
 
+// ── 1회성: 지점명 오타 수정 ──────────────────────────
+// Apps Script 에디터에서 fixBranchTypo() 실행
+function fixBranchTypo() {
+  var sheet = getSheet(RESP_SHEET, RESP_HEADERS);
+  if (sheet.getLastRow() < 2) return "데이터 없음";
+  var lastCol = sheet.getLastColumn();
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  var branchIdx = headers.indexOf("branch");
+  var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, lastCol).getValues();
+  var fixed = 0;
+  data.forEach(function(row, i) {
+    var b = String(row[branchIdx]);
+    if (/srp/i.test(b)) {
+      var newName = b.replace(/srp/gi, "SFP");
+      sheet.getRange(i + 2, branchIdx + 1).setValue(newName);
+      fixed++;
+    }
+  });
+  Logger.log("수정 완료: " + fixed + "건");
+  return "수정 " + fixed + "건";
+}
+
 // ── 1회성: 지점 목록 + 건수 확인 ─────────────────────
 // Apps Script 에디터에서 listBranches() 실행 → 로그에 지점명/건수 출력
 function listBranches() {
