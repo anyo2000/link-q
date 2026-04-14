@@ -678,10 +678,15 @@ h2 {
   letter-spacing: 0.3px;
 }
 .report-section .section-title {
-  font-size: 20px; font-weight: 800;
-  color: #1C2B5E; margin: 40px 0 16px;
-  padding-top: 28px;
+  font-size: 22px; font-weight: 800;
+  color: #1C2B5E; margin: 44px 0 8px;
+  padding-top: 32px;
   border-top: 2px solid #E5E7EB;
+}
+.report-section .section-title:first-of-type {
+  margin-top: 28px;
+  padding-top: 0;
+  border-top: none;
 }
 .subsection-title {
   font-size: 16px; font-weight: 800;
