@@ -1380,7 +1380,44 @@ function buildPreReport(b, preFps) {
     row.appendChild(meta);
     var track = el("div", "score-track");
     var fill = el("div", "score-fill");
-    fill.style.cssText = "width:" + (score / 5 * 100) + "%;background:" + diff.color;
+    var barPct = Math.max(0, Math.min(100, (score - 2) / 2 * 100));
+    fill.style.cssText = "width:" + barPct + "%;background:" + diff.color;
+    track.appendChild(fill);
+    row.appendChild(track);
+    card.appendChild(row);
+  });
+
+  // "어렵다" 비율 (4~5점 응답 비율)
+  card.appendChild(el("div", "subsection-title", '"어렵다" 응답 비율 (4~5점)'));
+  var hardCount = { L: 0, I: 0, N: 0, K: 0 };
+  var hardTotal = { L: 0, I: 0, N: 0, K: 0 };
+  preFps.forEach(function(f) {
+    var sa = getStageAvgs(f.pre.answers);
+    STAGES.forEach(function(stg) {
+      hardTotal[stg.id]++;
+      if (sa[stg.id] >= 4) hardCount[stg.id]++;
+    });
+  });
+  var maxHardPct = 0;
+  STAGES.forEach(function(stg) {
+    var pct = hardTotal[stg.id] > 0 ? Math.round(hardCount[stg.id] / hardTotal[stg.id] * 100) : 0;
+    if (pct > maxHardPct) maxHardPct = pct;
+  });
+  STAGES.forEach(function(stg) {
+    var c = hardCount[stg.id];
+    var pct = hardTotal[stg.id] > 0 ? Math.round(c / hardTotal[stg.id] * 100) : 0;
+    var isMax = pct === maxHardPct && pct > 0;
+    var row = el("div", "score-row");
+    var meta = el("div", "score-meta");
+    meta.innerHTML = '<span class="score-label" style="color:' + stg.color + '">' + stg.id + ' ' + stg.label + '</span>'
+      + '<span class="score-value-wrap">'
+      +   '<span class="score-num" style="color:' + stg.color + '">' + c + '<span style="font-size:16px">명</span></span>'
+      +   '<span class="score-tag" style="color:' + stg.color + '">' + pct + '%' + (isMax ? ' · 최다' : '') + '</span>'
+      + '</span>';
+    row.appendChild(meta);
+    var track = el("div", "score-track");
+    var fill = el("div", "score-fill");
+    fill.style.cssText = "width:" + pct + "%;background:" + stg.color + (isMax ? '' : '66');
     track.appendChild(fill);
     row.appendChild(track);
     card.appendChild(row);
@@ -1487,7 +1524,7 @@ function buildPostReport(bothFps) {
     preRow.innerHTML = '<span class="compare-tp">교육 전</span>';
     var preTrack = el("div", "compare-track");
     var preFill = el("div", "compare-fill");
-    preFill.style.cssText = "width:" + (preS / 5 * 100) + "%;background:" + preLbl.color + ";opacity:0.55";
+    preFill.style.cssText = "width:" + Math.max(0, Math.min(100, (preS - 2) / 2 * 100)) + "%;background:" + preLbl.color + ";opacity:0.55";
     preTrack.appendChild(preFill);
     preRow.appendChild(preTrack);
     var preVal = el("span", "compare-val");
@@ -1501,7 +1538,7 @@ function buildPostReport(bothFps) {
     postRow.innerHTML = '<span class="compare-tp">직후</span>';
     var postTrack = el("div", "compare-track");
     var postFill = el("div", "compare-fill");
-    postFill.style.cssText = "width:" + (postS / 5 * 100) + "%;background:" + postLbl.color;
+    postFill.style.cssText = "width:" + Math.max(0, Math.min(100, (postS - 2) / 2 * 100)) + "%;background:" + postLbl.color;
     postTrack.appendChild(postFill);
     postRow.appendChild(postTrack);
     var postVal = el("span", "compare-val");
@@ -1653,7 +1690,7 @@ function buildFollowupReport(allFps) {
     postRow.innerHTML = '<span class="compare-tp">직후</span>';
     var postTrack = el("div", "compare-track");
     var postFill = el("div", "compare-fill");
-    postFill.style.cssText = "width:" + (postS / 5 * 100) + "%;background:" + postLbl.color + ";opacity:0.55";
+    postFill.style.cssText = "width:" + Math.max(0, Math.min(100, (postS - 2) / 2 * 100)) + "%;background:" + postLbl.color + ";opacity:0.55";
     postTrack.appendChild(postFill);
     postRow.appendChild(postTrack);
     var postVal = el("span", "compare-val");
@@ -1666,7 +1703,7 @@ function buildFollowupReport(allFps) {
     fuRow.innerHTML = '<span class="compare-tp">3~4주 후</span>';
     var fuTrack = el("div", "compare-track");
     var fuFill = el("div", "compare-fill");
-    fuFill.style.cssText = "width:" + (fuS / 5 * 100) + "%;background:" + fuLbl.color;
+    fuFill.style.cssText = "width:" + Math.max(0, Math.min(100, (fuS - 2) / 2 * 100)) + "%;background:" + fuLbl.color;
     fuTrack.appendChild(fuFill);
     fuRow.appendChild(fuTrack);
     var fuVal = el("span", "compare-val");
@@ -2428,15 +2465,15 @@ function renderTimepointGroupedBar(canvasId, tpData) {
       maintainAspectRatio: false,
       scales: {
         y: {
-          beginAtZero: true,
-          max: 5,
+          min: 2,
+          max: 4,
           ticks: {
-            stepSize: 1,
+            stepSize: 0.5,
             font: { size: 13, weight: "600" },
             color: "#6B7280",
             callback: function(v) {
-              if (v === 1) return "1 쉬움";
-              if (v === 5) return "5 어려움";
+              if (v === 2) return "2 쉬움";
+              if (v === 4) return "4 어려움";
               return v;
             }
           },
@@ -2559,7 +2596,7 @@ function renderAdminOverviewCharts() {
         responsive: true,
         maintainAspectRatio: true,
         scales: {
-          x: { min: 0, max: 5, ticks: { stepSize: 1 } },
+          x: { min: 2, max: 4, ticks: { stepSize: 0.5 } },
           y: { grid: { display: false } },
         },
         plugins: { legend: { display: false } },
@@ -2691,7 +2728,7 @@ function renderAdminGroupCharts() {
         responsive: true,
         maintainAspectRatio: true,
         scales: {
-          y: { min: 0, max: 5, ticks: { stepSize: 1 } },
+          y: { min: 2, max: 4, ticks: { stepSize: 0.5 } },
         },
         plugins: {
           legend: { position: "bottom", labels: { font: { size: 11 } } },
