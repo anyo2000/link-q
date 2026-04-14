@@ -1382,120 +1382,42 @@ function buildPreReport(b, preFps, allAvgs) {
     + '<span class="step-tag" style="background:#3B5BDB14;color:#3B5BDB">교육 전</span>';
   card.appendChild(head);
 
-  card.appendChild(buildScaleLegend());
-
   var avgs = avgStageScore(preFps, "pre");
+  var hardestStg = STAGES.reduce(function(best, s) { return avgs[s.id] > avgs[best.id] ? s : best; });
+  var easiestStg = STAGES.reduce(function(best, s) { return avgs[s.id] < avgs[best.id] ? s : best; });
 
-  card.appendChild(el("div", "subsection-title", "단계별 난이도 (지점 평균)"));
-  STAGES.forEach(function(stg) {
-    var score = avgs[stg.id];
-    var diff = difficultyLabel(score);
-    var row = el("div", "score-row");
-    var meta = el("div", "score-meta");
-    meta.innerHTML = '<span class="score-label" style="color:' + stg.color + '">' + stg.id + ' ' + stg.label + '</span>'
-      + '<span class="score-value-wrap">'
-      +   '<span class="score-num" style="color:' + diff.color + '">' + score.toFixed(1) + '</span>'
-      +   '<span class="score-tag" style="color:' + diff.color + '">' + diff.label + '</span>'
-      + '</span>';
-    row.appendChild(meta);
-    var track = el("div", "score-track");
-    var fill = el("div", "score-fill");
-    var barPct = Math.max(0, Math.min(100, (score - 2) / 2 * 100));
-    fill.style.cssText = "width:" + barPct + "%;background:" + diff.color;
-    track.appendChild(fill);
-    row.appendChild(track);
-    card.appendChild(row);
-  });
-
-  // "어렵다" 비율 (4~5점 응답 비율)
-  card.appendChild(el("div", "subsection-title", '"어렵다" 응답 비율 (4~5점)'));
+  // 어렵다(4~5점) 데이터 준비
   var hardCount = { L: 0, I: 0, N: 0, K: 0 };
   var hardTotal = { L: 0, I: 0, N: 0, K: 0 };
+  var hardFpNames = { L: [], I: [], N: [], K: [] };
   preFps.forEach(function(f) {
     var sa = getStageAvgs(f.pre.answers);
     STAGES.forEach(function(stg) {
       hardTotal[stg.id]++;
-      if (sa[stg.id] >= 4) hardCount[stg.id]++;
+      if (sa[stg.id] >= 4) {
+        hardCount[stg.id]++;
+        hardFpNames[stg.id].push(f.name || f.empId);
+      }
     });
   });
-  var maxHardPct = 0;
-  STAGES.forEach(function(stg) {
-    var pct = hardTotal[stg.id] > 0 ? Math.round(hardCount[stg.id] / hardTotal[stg.id] * 100) : 0;
-    if (pct > maxHardPct) maxHardPct = pct;
-  });
-  STAGES.forEach(function(stg) {
-    var c = hardCount[stg.id];
-    var pct = hardTotal[stg.id] > 0 ? Math.round(c / hardTotal[stg.id] * 100) : 0;
-    var isMax = pct === maxHardPct && pct > 0;
-    var row = el("div", "score-row");
-    var meta = el("div", "score-meta");
-    meta.innerHTML = '<span class="score-label" style="color:' + stg.color + '">' + stg.id + ' ' + stg.label + '</span>'
-      + '<span class="score-value-wrap">'
-      +   '<span class="score-num" style="color:' + stg.color + '">' + c + '<span style="font-size:16px">명</span></span>'
-      +   '<span class="score-tag" style="color:' + stg.color + '">' + pct + '%' + (isMax ? ' · 최다' : '') + '</span>'
-      + '</span>';
-    row.appendChild(meta);
-    var track = el("div", "score-track");
-    var fill = el("div", "score-fill");
-    fill.style.cssText = "width:" + pct + "%;background:" + stg.color + (isMax ? '' : '66');
-    track.appendChild(fill);
-    row.appendChild(track);
-    card.appendChild(row);
-  });
 
-  card.appendChild(el("div", "subsection-title", '"가장 어렵다" 응답 분포 (FP별 최약점)'));
+  // 최약점 데이터 준비
   var weakCount = { L: 0, I: 0, N: 0, K: 0 };
   preFps.forEach(function(f) {
     var w = getWeakestStage(f.pre.answers);
     weakCount[w.primary]++;
   });
-  var maxCount = Math.max(weakCount.L, weakCount.I, weakCount.N, weakCount.K);
-  STAGES.forEach(function(stg) {
-    var c = weakCount[stg.id];
-    var pct = preFps.length > 0 ? Math.round(c / preFps.length * 100) : 0;
-    var isMax = c === maxCount && c > 0;
-    var row = el("div", "score-row");
-    var meta = el("div", "score-meta");
-    meta.innerHTML = '<span class="score-label" style="color:' + stg.color + '">' + stg.id + ' ' + stg.label + '</span>'
-      + '<span class="score-value-wrap">'
-      +   '<span class="score-num" style="color:' + stg.color + '">' + c + '<span style="font-size:16px">명</span></span>'
-      +   '<span class="score-tag" style="color:' + stg.color + '">' + pct + '%' + (isMax ? ' · 최다' : '') + '</span>'
-      + '</span>';
-    row.appendChild(meta);
-    var track = el("div", "score-track");
-    var fill = el("div", "score-fill");
-    fill.style.cssText = "width:" + pct + "%;background:" + stg.color + (isMax ? '' : '66');
-    track.appendChild(fill);
-    row.appendChild(track);
-    card.appendChild(row);
-  });
+  var topWeakStg = STAGES.reduce(function(best, s) { return weakCount[s.id] > weakCount[best.id] ? s : best; });
 
-  // ── 지점장 코칭 가이드 ────────────────────────────────
-  var hardestStg = STAGES.reduce(function(best, s) { return avgs[s.id] > avgs[best.id] ? s : best; });
-  var easiestStg = STAGES.reduce(function(best, s) { return avgs[s.id] < avgs[best.id] ? s : best; });
-
-  // 코칭 우선순위: 어렵다(4~5점) 비율 기준 정렬
-  var coachPriority = STAGES.map(function(stg) {
-    var hc = hardCount[stg.id];
-    var pct = hardTotal[stg.id] > 0 ? Math.round(hc / hardTotal[stg.id] * 100) : 0;
-    // 해당 단계 4~5점인 FP 이름 목록
-    var fpNames = [];
-    preFps.forEach(function(f) {
-      var sa = getStageAvgs(f.pre.answers);
-      if (sa[stg.id] >= 4) fpNames.push(f.name || f.empId);
-    });
-    return { stg: stg, count: hc, pct: pct, fpNames: fpNames };
-  }).sort(function(a, b) { return b.count - a.count; });
-
-  // ① 한 줄 진단
-  var insight = el("div", "insight-box");
+  // ════════════════════════════════════════════════════
+  // ① 우리 지점 진단 — 한 줄 핵심
+  // ════════════════════════════════════════════════════
+  var diagBox = el("div", "insight-box");
   var diagHtml = '<div class="insight-title">우리 지점 진단</div>'
     + '<div class="insight-line" style="font-size:20px;line-height:1.6">'
     +   '우리 지점은 <span style="color:' + hardestStg.color + ';font-weight:800;font-size:24px">'
     +     hardestStg.id + '(' + hardestStg.label + ') 단계</span>를 가장 어려워합니다.'
     + '</div>';
-
-  // ② 전체 대비 특이점 (특별히 높거나 낮을 때만)
   if (allAvgs) {
     var THRESHOLD = 0.3;
     var highStgs = [];
@@ -1524,27 +1446,133 @@ function buildPreReport(b, preFps, allAvgs) {
         + '</div>';
     }
   }
-  insight.innerHTML = diagHtml;
-  card.appendChild(insight);
+  diagBox.innerHTML = diagHtml;
+  card.appendChild(diagBox);
 
-  // ③ 코칭 우선순위 (단계별 → 해당 FP)
-  var coachCard = el("div", "insight-box");
-  coachCard.style.marginTop = "12px";
-  var coachHtml = '<div class="insight-title">코칭 우선순위</div>';
+  // ════════════════════════════════════════════════════
+  // ② 단계별 난이도 — 해석 → 도표
+  // ════════════════════════════════════════════════════
+  card.appendChild(buildScaleLegend());
+
+  // 해석 먼저
+  var avgInterpret = el("div", "report-note");
+  avgInterpret.innerHTML = preFps.length + '명의 FP가 각 단계를 얼마나 어렵게 느끼는지 평균 점수입니다. '
+    + '<b style="color:' + hardestStg.color + '">' + hardestStg.id + '(' + hardestStg.label + ')</b>가 '
+    + '<b>' + avgs[hardestStg.id].toFixed(1) + '점</b>으로 가장 높고, '
+    + '<b style="color:' + easiestStg.color + '">' + easiestStg.id + '(' + easiestStg.label + ')</b>가 '
+    + '<b>' + avgs[easiestStg.id].toFixed(1) + '점</b>으로 가장 낮습니다.';
+  card.appendChild(avgInterpret);
+
+  card.appendChild(el("div", "subsection-title", "단계별 난이도 (지점 평균)"));
+  STAGES.forEach(function(stg) {
+    var score = avgs[stg.id];
+    var diff = difficultyLabel(score);
+    var row = el("div", "score-row");
+    var meta = el("div", "score-meta");
+    meta.innerHTML = '<span class="score-label" style="color:' + stg.color + '">' + stg.id + ' ' + stg.label + '</span>'
+      + '<span class="score-value-wrap">'
+      +   '<span class="score-num" style="color:' + diff.color + '">' + score.toFixed(1) + '</span>'
+      +   '<span class="score-tag" style="color:' + diff.color + '">' + diff.label + '</span>'
+      + '</span>';
+    row.appendChild(meta);
+    var track = el("div", "score-track");
+    var fill = el("div", "score-fill");
+    var barPct = Math.max(0, Math.min(100, (score - 2) / 2 * 100));
+    fill.style.cssText = "width:" + barPct + "%;background:" + diff.color;
+    track.appendChild(fill);
+    row.appendChild(track);
+    card.appendChild(row);
+  });
+
+  // ════════════════════════════════════════════════════
+  // ③ 코칭 우선순위 — 해석 → 도표 → FP 이름
+  // ════════════════════════════════════════════════════
+  var coachPriority = STAGES.map(function(stg) {
+    var hc = hardCount[stg.id];
+    var pct = hardTotal[stg.id] > 0 ? Math.round(hc / hardTotal[stg.id] * 100) : 0;
+    return { stg: stg, count: hc, pct: pct, fpNames: hardFpNames[stg.id] };
+  }).sort(function(a, b) { return b.count - a.count; });
+
+  var topCoach = coachPriority[0];
+
+  // 해석
+  var coachInterpret = el("div", "report-note");
+  coachInterpret.style.marginTop = "32px";
+  coachInterpret.innerHTML = '4~5점(어렵다)을 고른 FP 수입니다. '
+    + '<b style="color:' + topCoach.stg.color + '">' + topCoach.stg.id + '(' + topCoach.stg.label + ')</b> 단계에서 '
+    + preFps.length + '명 중 <b>' + topCoach.count + '명(' + topCoach.pct + '%)</b>이 어려움을 느끼고 있어 코칭 1순위입니다.';
+  card.appendChild(coachInterpret);
+
+  card.appendChild(el("div", "subsection-title", "코칭 우선순위"));
   var rank = 0;
   coachPriority.forEach(function(cp) {
     if (cp.count === 0) return;
     rank++;
-    coachHtml += '<div class="insight-line">'
-      + '<b style="color:' + cp.stg.color + '">' + rank + '순위 ' + cp.stg.id + ' ' + cp.stg.label + '</b>'
-      + ' — ' + cp.count + '명(' + cp.pct + '%)이 어려워함<br>'
-      + '<span style="font-size:14px;color:#9CA3AF">해당 FP: ' + cp.fpNames.join(', ') + '</span>'
-      + '</div>';
-  });
-  coachCard.innerHTML = coachHtml;
-  card.appendChild(coachCard);
 
-  // ④ 집중 케어 FP (모든 단계에서 4~5점인 FP)
+    // 도표 행
+    var pct = cp.pct;
+    var isTop = rank === 1;
+    var row = el("div", "score-row");
+    var meta = el("div", "score-meta");
+    meta.innerHTML = '<span class="score-label" style="color:' + cp.stg.color + '">'
+      + rank + '순위 ' + cp.stg.id + ' ' + cp.stg.label + '</span>'
+      + '<span class="score-value-wrap">'
+      +   '<span class="score-num" style="color:' + cp.stg.color + '">' + cp.count + '<span style="font-size:16px">명</span></span>'
+      +   '<span class="score-tag" style="color:' + cp.stg.color + '">' + pct + '%' + (isTop ? ' · 최다' : '') + '</span>'
+      + '</span>';
+    row.appendChild(meta);
+    var track = el("div", "score-track");
+    var fill = el("div", "score-fill");
+    fill.style.cssText = "width:" + pct + "%;background:" + cp.stg.color + (isTop ? '' : '66');
+    track.appendChild(fill);
+    row.appendChild(track);
+    card.appendChild(row);
+
+    // FP 이름 리스트
+    if (cp.fpNames.length > 0) {
+      var names = el("div");
+      names.style.cssText = "font-size:14px;color:#9CA3AF;padding:4px 0 12px 0";
+      names.textContent = "해당 FP: " + cp.fpNames.join(", ");
+      card.appendChild(names);
+    }
+  });
+
+  // ════════════════════════════════════════════════════
+  // ④ FP별 최약점 — 해석 → 도표
+  // ════════════════════════════════════════════════════
+  var weakInterpret = el("div", "report-note");
+  weakInterpret.style.marginTop = "32px";
+  var topWeakPct = preFps.length > 0 ? Math.round(weakCount[topWeakStg.id] / preFps.length * 100) : 0;
+  weakInterpret.innerHTML = '각 FP에게 4단계 중 가장 어려운 1개를 물었을 때의 분포입니다. '
+    + '<b style="color:' + topWeakStg.color + '">' + topWeakStg.id + '(' + topWeakStg.label + ')</b>를 꼽은 FP가 '
+    + '<b>' + weakCount[topWeakStg.id] + '명(' + topWeakPct + '%)</b>으로 가장 많습니다.';
+  card.appendChild(weakInterpret);
+
+  card.appendChild(el("div", "subsection-title", "FP별 최약점 분포"));
+  var maxCount = Math.max(weakCount.L, weakCount.I, weakCount.N, weakCount.K);
+  STAGES.forEach(function(stg) {
+    var c = weakCount[stg.id];
+    var pct = preFps.length > 0 ? Math.round(c / preFps.length * 100) : 0;
+    var isMax = c === maxCount && c > 0;
+    var row = el("div", "score-row");
+    var meta = el("div", "score-meta");
+    meta.innerHTML = '<span class="score-label" style="color:' + stg.color + '">' + stg.id + ' ' + stg.label + '</span>'
+      + '<span class="score-value-wrap">'
+      +   '<span class="score-num" style="color:' + stg.color + '">' + c + '<span style="font-size:16px">명</span></span>'
+      +   '<span class="score-tag" style="color:' + stg.color + '">' + pct + '%' + (isMax ? ' · 최다' : '') + '</span>'
+      + '</span>';
+    row.appendChild(meta);
+    var track = el("div", "score-track");
+    var fill = el("div", "score-fill");
+    fill.style.cssText = "width:" + pct + "%;background:" + stg.color + (isMax ? '' : '66');
+    track.appendChild(fill);
+    row.appendChild(track);
+    card.appendChild(row);
+  });
+
+  // ════════════════════════════════════════════════════
+  // ⑤ 집중 케어 필요 FP
+  // ════════════════════════════════════════════════════
   var dangerFps = [];
   preFps.forEach(function(f) {
     var sa = getStageAvgs(f.pre.answers);
@@ -1552,14 +1580,16 @@ function buildPreReport(b, preFps, allAvgs) {
     if (allHard) dangerFps.push(f.name || f.empId);
   });
   if (dangerFps.length > 0) {
-    var dangerBox = el("div", "insight-box");
-    dangerBox.style.marginTop = "12px";
-    dangerBox.innerHTML = '<div class="insight-title">집중 케어 필요 FP</div>'
-      + '<div class="insight-line">'
-      + '모든 단계에서 어려움을 느끼는 FP입니다. 전반적인 케어가 필요합니다.<br>'
-      + '<b style="font-size:17px">' + dangerFps.join(', ') + '</b>'
-      + '</div>';
-    card.appendChild(dangerBox);
+    var dangerInterpret = el("div", "report-note");
+    dangerInterpret.style.marginTop = "32px";
+    dangerInterpret.innerHTML = '아래 FP는 <b>모든 단계에서 4~5점</b>을 선택했습니다. 특정 단계가 아니라 전반적인 케어가 필요합니다.';
+    card.appendChild(dangerInterpret);
+
+    card.appendChild(el("div", "subsection-title", "집중 케어 필요 FP"));
+    var dangerList = el("div");
+    dangerList.style.cssText = "font-size:17px;font-weight:700;color:#1C2B5E;padding:8px 0";
+    dangerList.textContent = dangerFps.join(", ");
+    card.appendChild(dangerList);
   }
 
   return card;
