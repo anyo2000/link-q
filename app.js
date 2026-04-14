@@ -1168,7 +1168,8 @@ function normalizeBranch(name) {
   if (!name) return "";
   return String(name)
     .replace(/\s+/g, "")           // 공백 제거
-    .replace(/(SFP지점|SFP|sfp|지점|동|점)$/i, "") // 끝의 SFP지점/SFP/지점/동/점 제거
+    .replace(/(SFP사업소|SFP지점|사업소|SFP|sfp|srp|지점|동|점)$/i, "") // 접미사 제거
+    .replace(/^한화/, "") // 한화 접두어 제거
     .toLowerCase();
 }
 
@@ -1180,7 +1181,7 @@ function pickBranchDisplayName(names) {
   names.forEach(function(n) {
     var clean = String(n).replace(/\s+/g, "");
     if (/sfp/i.test(clean)) hasSfp = true;
-    var b = clean.replace(/(SFP지점|SFP|sfp|지점|동|점)$/i, "");
+    var b = clean.replace(/(SFP사업소|SFP지점|사업소|SFP|sfp|srp|지점|동|점)$/i, "").replace(/^한화/, "");
     if (!base || b.length > base.length) base = b;
   });
   return base + (hasSfp ? "SFP지점" : "지점");
