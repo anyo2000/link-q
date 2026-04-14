@@ -530,6 +530,110 @@ function regenerateAllDummy() {
   return "deleted " + deleted + " rows, inserted " + newRows.length + " rows (한강 30명, 한국 10명)";
 }
 
+// ── 1회성: 지점 목록 + 건수 확인 ─────────────────────
+// Apps Script 에디터에서 listBranches() 실행 → 로그에 지점명/건수 출력
+function listBranches() {
+  var sheet = getSheet(RESP_SHEET, RESP_HEADERS);
+  if (sheet.getLastRow() < 2) return "데이터 없음";
+
+  var lastCol = sheet.getLastColumn();
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  var branchIdx = headers.indexOf("branch");
+  var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, lastCol).getValues();
+
+  var branchCount = {};
+  data.forEach(function (row) {
+    var b = String(row[branchIdx]);
+    branchCount[b] = (branchCount[b] || 0) + 1;
+  });
+
+  var sorted = Object.keys(branchCount).sort();
+  var lines = sorted.map(function (b) { return b + " : " + branchCount[b] + "건"; });
+  Logger.log("\n" + lines.join("\n"));
+  return lines.join("\n");
+}
+
+// ── 1회성: 특정 접두어로 시작하는 지점 데이터 삭제 ───
+// Apps Script 에디터에서 deleteByBranchPrefix() 실행
+function deleteByBranchPrefix() {
+  var PREFIXES = ["한국", "정발산", "안산", "화성", "은계", "한화손보", "교차", "한양"];
+
+  var sheet = getSheet(RESP_SHEET, RESP_HEADERS);
+  if (sheet.getLastRow() < 2) return "데이터 없음";
+
+  var lastCol = sheet.getLastColumn();
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  var branchIdx = headers.indexOf("branch");
+  var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, lastCol).getValues();
+
+  var rowsToDelete = [];
+  var deletedBranches = {};
+  data.forEach(function (row, i) {
+    var b = String(row[branchIdx]);
+    var match = PREFIXES.some(function (p) { return b.indexOf(p) === 0; });
+    if (match) {
+      rowsToDelete.push(i + 2);
+      deletedBranches[b] = (deletedBranches[b] || 0) + 1;
+    }
+  });
+
+  if (rowsToDelete.length === 0) return "해당 지점 없음";
+
+  rowsToDelete.reverse().forEach(function (rowNum) {
+    sheet.deleteRow(rowNum);
+  });
+
+  var summary = Object.keys(deletedBranches).sort().map(function (b) {
+    return b + " : " + deletedBranches[b] + "건";
+  });
+  Logger.log("삭제 완료:\n" + summary.join("\n"));
+  return "삭제 " + rowsToDelete.length + "행:\n" + summary.join("\n");
+}
+
+// ── 1회성: 지점에 1건만 있는 데이터 삭제 ─────────────
+// Apps Script 에디터에서 deleteSingleEntryBranches() 직접 실행
+function deleteSingleEntryBranches() {
+  var sheet = getSheet(RESP_SHEET, RESP_HEADERS);
+  if (sheet.getLastRow() < 2) return "데이터 없음";
+
+  var lastCol = sheet.getLastColumn();
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  var branchIdx = headers.indexOf("branch");
+  if (branchIdx === -1) return "branch 컬럼을 찾을 수 없음";
+
+  var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, lastCol).getValues();
+
+  // 지점별 카운트
+  var branchCount = {};
+  data.forEach(function (row) {
+    var b = String(row[branchIdx]);
+    branchCount[b] = (branchCount[b] || 0) + 1;
+  });
+
+  // 1건인 지점 목록
+  var singleBranches = Object.keys(branchCount).filter(function (b) {
+    return branchCount[b] === 1;
+  });
+
+  if (singleBranches.length === 0) return "1건만 있는 지점이 없습니다";
+
+  // 삭제할 행 번호 수집 (아래부터 삭제해야 인덱스 안 밀림)
+  var rowsToDelete = [];
+  data.forEach(function (row, i) {
+    var b = String(row[branchIdx]);
+    if (singleBranches.indexOf(b) >= 0) {
+      rowsToDelete.push(i + 2); // 시트 행번호 (헤더=1행)
+    }
+  });
+
+  // 아래부터 삭제
+  rowsToDelete.reverse().forEach(function (rowNum) {
+    sheet.deleteRow(rowNum);
+  });
+
+  return "삭제 완료: " + singleBranches.join(", ") + " (" + rowsToDelete.length + "행)";
+}
+
 // ── API: 전체 데이터 내보내기 ────────────────────────
 function getExportData() {
   var responses = readAllResponses();
