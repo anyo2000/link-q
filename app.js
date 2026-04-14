@@ -1168,7 +1168,7 @@ function normalizeBranch(name) {
   if (!name) return "";
   return String(name)
     .replace(/\s+/g, "")           // 공백 제거
-    .replace(/(SFP지점|SFP|sfp|지점|점)$/i, "") // 끝의 SFP지점/SFP/지점/점 제거
+    .replace(/(SFP지점|SFP|sfp|지점|동|점)$/i, "") // 끝의 SFP지점/SFP/지점/동/점 제거
     .toLowerCase();
 }
 
