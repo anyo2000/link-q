@@ -656,6 +656,458 @@ function deleteSingleEntryBranches() {
   return "삭제 완료: " + singleBranches.join(", ") + " (" + rowsToDelete.length + "행)";
 }
 
+// ── 1회성: 지점명 전체 통일 + 1건짜리 자동 삭제 ────────
+// Apps Script 에디터에서 unifyBranchNames() 직접 실행
+function unifyBranchNames() {
+  var RENAME_MAP = {
+    // 강남
+    "강남": "강남지점",
+    // 강진
+    "강진": "강진지점",
+    "강지지점": "강진지점",
+    "강진지정": "강진지점",
+    "강진한화손보": "강진지점",
+    "강진한화지점": "강진지점",
+    "전남강진지점": "강진지점",
+    "한화강진": "강진지점",
+    "한화강진지점": "강진지점",
+    "한화손해보험 강진": "강진지점",
+    "한화손해보험 강진지점": "강진지점",
+    "한화손해보험강진지점": "강진지점",
+    "환화손해보험 강진점": "강진지점",
+    "환화손해보험강진지점": "강진지점",
+    // 고양
+    "고양": "고양SFP지점",
+    "고양SFP": "고양SFP지점",
+    "고양sfp": "고양SFP지점",
+    "고양sfp지점": "고양SFP지점",
+    "고양 sfp 지점": "고양SFP지점",
+    "고양SFP지정ㅅ": "고양SFP지점",
+    "고양지점": "고양SFP지점",
+    "한화손해보험 고양SFP": "고양SFP지점",
+    // 광주
+    "광주지점": "광주SFP지점",
+    "광주SFP지점": "광주SFP지점",
+    // 광진
+    "광진": "광진지점",
+    // 구리
+    "구리지점": "구리SFP지점",
+    "구리sfp지점": "구리SFP지점",
+    // 구미
+    "구미": "구미SFP지점",
+    "구미 송정동": "구미SFP지점",
+    "구미송정": "구미SFP지점",
+    "구미SFP지점": "구미SFP지점",
+    "구미지점": "구미SFP지점",
+    "한화손해보험 구미지점": "구미SFP지점",
+    // 군산
+    "군산한화지점": "군산지점",
+    // 김포
+    "김포sfp": "김포SFP지점",
+    "김포지정": "김포SFP지점",
+    "한화 김포지점": "김포SFP지점",
+    // 대구
+    "대구 sfp": "대구SFP지점",
+    "댜구sfp": "대구SFP지점",
+    "한화 대구 SFP": "대구SFP지점",
+    "한화대구SFP": "대구SFP지점",
+    "한화대구sfp": "대구SFP지점",
+    // 대덕
+    "대덕": "대덕지점",
+    // 도곡
+    "도곡": "도곡지점",
+    // 동부산
+    "동부산": "동부산지점",
+    "동부산시점": "동부산지점",
+    "동부산영업소": "동부산지점",
+    // 동순천
+    "동순천점": "동순천지점",
+    // 동천안
+    "동천안 지점": "동천안지점",
+    "천안동천안지점": "동천안지점",
+    // 둔산
+    "둔산": "둔산지점",
+    // 로얄
+    "로알지점": "로얄지점",
+    "로야지점": "로얄지점",
+    // 리더스SFP
+    "거제 리더스 SFP 지점": "리더스SFP지점",
+    "거제리더스": "리더스SFP지점",
+    "거제리더스sfp지점": "리더스SFP지점",
+    "리더스거제 Sfp": "리더스SFP지점",
+    "리더스거제sfp": "리더스SFP지점",
+    "리더스 SFP 지점": "리더스SFP지점",
+    "리더스 SFP지점": "리더스SFP지점",
+    "리더스sft": "리더스SFP지점",
+    "한화sfp리더스지점": "리더스SFP지점",
+    "한화리더스SFP지점": "리더스SFP지점",
+    "한화손해보험 리더스SFP지점": "리더스SFP지점",
+    // 리더스지점 (SFP 없는 것도 같은 지점)
+    "리더스지점": "리더스SFP지점",
+    "리더스지점 통영센터": "리더스SFP지점",
+    "리더스sfp": "리더스SFP지점",
+    "리더스SFP": "리더스SFP지점",
+    "리더스sfp지점": "리더스SFP지점",
+    // 목동
+    "목덩지점": "목동지점",
+    // 불광
+    "불광": "불광지점",
+    "불광영업소": "불광지점",
+    // 서동탄
+    "서동탄": "서동탄SFP지점",
+    "서동탄SFP": "서동탄SFP지점",
+    "서동탄sfp": "서동탄SFP지점",
+    "서동탄지점": "서동탄SFP지점",
+    // 서산
+    "서산": "서산지점",
+    "서삱": "서산지점",
+    "한화손해보험 서산지점": "서산지점",
+    // 서울
+    "서울sfp지점": "서울SFP지점",
+    "서울 SFP": "서울SFP지점",
+    "서울 sfp": "서울SFP지점",
+    "서울sap": "서울SFP지점",
+    "서울sfp": "서울SFP지점",
+    "서울SFP": "서울SFP지점",
+    // 성남
+    "성남": "성남지점",
+    // 송파
+    "송파": "송파지점",
+    // 순천
+    "순천": "순천지점",
+    "순천 지점": "순천지점",
+    // 신도림
+    "신도림저점": "신도림지점",
+    // 안산
+    "안산지점": "안산SFP지점",
+    "안산 SFP": "안산SFP지점",
+    // 아산
+    "아산": "아산지점",
+    // 연제
+    "연제": "연제지점",
+    "연제영업소": "연제지점",
+    // 여의도
+    "여의도지정": "여의도지점",
+    // 영주
+    "영주": "영주지점",
+    "영주 한화손해보험": "영주지점",
+    // 오창
+    "오창sfp": "오창SFP지점",
+    "오창SFP지점": "오창SFP지점",
+    // 용인
+    "용인": "용인SFP지점",
+    "용인 SFP지점": "용인SFP지점",
+    "용인SFP": "용인SFP지점",
+    "용인SFP사업소": "용인SFP지점",
+    "용인sfp": "용인SFP지점",
+    "용인sfp지점": "용인SFP지점",
+    "용인지점": "용인SFP지점",
+    "한화용인": "용인SFP지점",
+    "한화용인지점": "용인SFP지점",
+    // 육성
+    "육성": "육성지점",
+    "육성센터": "육성지점",
+    "육성실": "육성지점",
+    // 은계
+    "은계": "은계SFP지점",
+    "은계SFP": "은계SFP지점",
+    "은계SFp": "은계SFP지점",
+    "은계sef": "은계SFP지점",
+    "은계sfp": "은계SFP지점",
+    "은계sfp지점": "은계SFP지점",
+    "은계SFP지점": "은계SFP지점",
+    "은계지점": "은계SFP지점",
+    // 익산
+    "익산": "익산지점",
+    // 인천
+    "인천": "인천SFP지점",
+    "인천SFC": "인천SFP지점",
+    "인천SFP": "인천SFP지점",
+    "인천sfp": "인천SFP지점",
+    "인천SFP지점": "인천SFP지점",
+    "인천sfp지점": "인천SFP지점",
+    "인천지점": "인천SFP지점",
+    "한화 손보 인천SFP": "인천SFP지점",
+    "한화손보 인천SFP": "인천SFP지점",
+    "한화손보 인천 sfp지점": "인천SFP지점",
+    // 잠실
+    "잠실지정": "잠실지점",
+    // 전주
+    "전주지점": "전주SFP지점",
+    "전주 SFP": "전주SFP지점",
+    "전주 SFP 지점": "전주SFP지점",
+    "전주 SFP지점": "전주SFP지점",
+    "전주 SFP지점 한화손해보험": "전주SFP지점",
+    "전주sfp지좀": "전주SFP지점",
+    "전주sfp": "전주SFP지점",
+    "전주SFP": "전주SFP지점",
+    // 정발산
+    "정발산": "정발산SFP지점",
+    "정발산SFP": "정발산SFP지점",
+    "정발산지점": "정발산SFP지점",
+    "정발산SFP지점": "정발산SFP지점",
+    // 정읍
+    "정읍": "정읍지점",
+    "정등지점": "정동지점",
+    "한화 정읍지점": "정읍지점",
+    // 제주
+    "제주": "제주지점",
+    // 중부산
+    "중부산": "중부산지점",
+    // 중앙
+    "중앙지점1": "중앙지점",
+    // 직지
+    "직지": "직지지점",
+    // 창원
+    "창원지덤": "창원지점",
+    // 충북
+    "충북SFP": "충북SFP지점",
+    // 탄방
+    "탄방sfp": "탄방SFP지점",
+    "탄방sfp지점": "탄방SFP지점",
+    "탄방SFP지점": "탄방SFP지점",
+    // 파주
+    "한화파주지점": "파주지점",
+    // 하동
+    "하동": "하동지점",
+    // 한라
+    "한라지정": "한라지점",
+    // 한화
+    "한화": "한화지점",
+    "한화 지점": "한화지점",
+    "한화손보": "한화지점",
+    "한화손보지점": "한화지점",
+    "한화손해보험": "한화지점",
+    // 해남
+    "해남": "해남(배양)지점",
+    // 호남교차
+    "호남교차": "호남교차지점",
+    "호남교차저점": "호남교차지점",
+    // 화성
+    "화성": "화성SFP지점",
+    "화성 SFP지점": "화성SFP지점",
+    "화성지점": "화성SFP지점",
+    // 경기광주 → 광주SFP지점
+    "경기광주SFP": "광주SFP지점",
+    "경기광주": "광주SFP지점",
+    "경기광주SFP지점": "광주SFP지점",
+    // 한화 SFP → 한화지점
+    "한화 SFP": "한화지점",
+    // 광복
+    "광복": "광복지점",
+    "광복4팀": "광복지점",
+    // 김포 (SFP 있으니 통일)
+    "김포": "김포SFP지점",
+    "김포지점": "김포SFP지점",
+    // 노원
+    "노원": "노원지점",
+    // 대구 (SFP 있으니 통일)
+    "대구": "대구SFP지점",
+    "대구sfp": "대구SFP지점",
+    "대구SFP": "대구SFP지점",
+    "대구 SFP": "대구SFP지점",
+    "대구 sfp지점": "대구SFP지점",
+    "대구sfp지점": "대구SFP지점",
+    "대구지점": "대구SFP지점",
+    // 동마산
+    "동마산": "동마산지점",
+    // 동순천
+    "동순천": "동순천지점",
+    // 동천안
+    "동천안": "동천안지점",
+    // 로얄
+    "로얄": "로얄지점",
+    // 리더스
+    "리더스": "리더스SFP지점",
+    // 목동
+    "목동": "목동지점",
+    // 부평
+    "부평": "부평지점",
+    "부평중앙": "부평지점",
+    // 사당
+    "사당": "사당지점",
+    // 신도림
+    "신도림": "신도림지점",
+    // 신화
+    "신화": "신화지점",
+    // 안산 (SFP 있으니 통일)
+    "안산": "안산SFP지점",
+    "안산SFP": "안산SFP지점",
+    "안산sfp": "안산SFP지점",
+    "안산sfp지점": "안산SFP지점",
+    // 여의도
+    "여의도": "여의도지점",
+    // 잠실
+    "잠실": "잠실지점",
+    "잠실 지점": "잠실지점",
+    // 전주sfp → 전주SFP지점
+    "전주sfp지점": "전주SFP지점",
+    // 중앙
+    "중앙": "중앙지점",
+    // 파주
+    "파주": "파주지점",
+    // 해남(배양)
+    "해남(배양)": "해남(배양)지점",
+    // 거제리더스SFP → 리더스SFP지점
+    "거제리더스SFP": "리더스SFP지점",
+    // 한양
+    "한양SFP": "한양SFP지점",
+    "한양sfp": "한양SFP지점",
+    "한양sfp지점": "한양SFP지점",
+    "한양": "한양SFP지점",
+    "한양 SFP": "한양SFP지점",
+    "한양 SFP 지점": "한양SFP지점",
+    "한양지점": "한양SFP지점",
+    // 추가 오타
+    "계야지점": "계양지점",
+    "일산": "일산지점",
+    "청주": "청주지점",
+    "한화SFP지점": "한화지점",
+    "한화손보 신브평": "신부평지점",
+    "해남(배양)": "해남(배양)지점",
+    "해남지점": "해남(배양)지점"
+  };
+
+  // 삭제 대상: 더미 empId
+  var TRASH_EMPIDS = ["0", "4222222", "8555555", "4444444", "5555855",
+                      "2223333", "5555555", "1111111", "8055155", "1123551"];
+  // 삭제 대상: 명시적 쓰레기 지점명
+  var TRASH_BRANCHES = ["ㅇ", "ㅇㅇ", "ㅇㅇㅇ", "ㄱㄴㄷ", "ㄴ", "ㄹㄹ", "ㅣ", "222",
+                        "지점", "한국", "SFP", "공주", "새청주", "시흥", "영교", "영교파트",
+                        "경남SFP지점", "경남지점", "대구2", "메가톤바", "보천", "유란선",
+                        "이광표", "이명순", "정순자", "정동짖ㆍㅁ", "챌린저",
+                        "광명", "광양지점", "대전지점", "송내지점", "오창SFP지점",
+                        "전북지역단", "제주지점", "한라지점", "한강지점"];
+
+  var sheet = getSheet(RESP_SHEET, RESP_HEADERS);
+  if (sheet.getLastRow() < 2) return "데이터 없음";
+
+  var lastCol = sheet.getLastColumn();
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  var branchIdx = headers.indexOf("branch");
+  var empIdIdx = headers.indexOf("empId");
+  var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, lastCol).getValues();
+
+  // 1단계: 이름 변경
+  var renamed = 0;
+  data.forEach(function (row, i) {
+    var b = String(row[branchIdx]);
+    if (RENAME_MAP[b] && RENAME_MAP[b] !== b) {
+      sheet.getRange(i + 2, branchIdx + 1).setValue(RENAME_MAP[b]);
+      row[branchIdx] = RENAME_MAP[b];
+      renamed++;
+    }
+  });
+
+  // 2단계: 쓰레기 삭제 (더미 empId + 명시적 지점명 + 문자 붙여넣기 등 긴 텍스트)
+  var rowsToDelete = [];
+  data.forEach(function (row, i) {
+    var b = String(row[branchIdx]);
+    var eid = String(row[empIdIdx]);
+    if (TRASH_EMPIDS.indexOf(eid) >= 0 || TRASH_BRANCHES.indexOf(b) >= 0 || b.length > 30) {
+      rowsToDelete.push(i + 2);
+    }
+  });
+
+  // 삭제 (아래부터)
+  rowsToDelete.sort(function (a, b) { return b - a; });
+  rowsToDelete.forEach(function (rowNum) {
+    sheet.deleteRow(rowNum);
+  });
+
+  var msg = "이름 변경: " + renamed + "건, 삭제: " + rowsToDelete.length + "행";
+  Logger.log(msg);
+  return msg;
+}
+
+// ── 1회성: 1건짜리 지점 전부 삭제 (2026-04-24) ────────
+// unifyBranchNames() 실행 후에 이것을 실행할 것
+function deleteSingleEntryBranchesOnce() {
+  var sheet = getSheet(RESP_SHEET, RESP_HEADERS);
+  if (sheet.getLastRow() < 2) return "데이터 없음";
+
+  var lastCol = sheet.getLastColumn();
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  var branchIdx = headers.indexOf("branch");
+  var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, lastCol).getValues();
+
+  var branchCount = {};
+  data.forEach(function (row) {
+    var b = String(row[branchIdx]);
+    branchCount[b] = (branchCount[b] || 0) + 1;
+  });
+
+  var singleBranches = {};
+  Object.keys(branchCount).forEach(function (b) {
+    if (branchCount[b] === 1) singleBranches[b] = true;
+  });
+
+  var rowsToDelete = [];
+  data.forEach(function (row, i) {
+    var b = String(row[branchIdx]);
+    if (singleBranches[b]) rowsToDelete.push(i + 2);
+  });
+
+  rowsToDelete.reverse().forEach(function (rowNum) {
+    sheet.deleteRow(rowNum);
+  });
+
+  var list = Object.keys(singleBranches).sort().join(", ");
+  Logger.log("삭제된 지점: " + list);
+  return "삭제: " + rowsToDelete.length + "행 (" + Object.keys(singleBranches).length + "개 지점)";
+}
+
+// ── 1회성: 중복사번 제거 (시점별 마지막 응답만 유지) ──
+// Apps Script 에디터에서 deduplicateByEmpId() 직접 실행
+function deduplicateByEmpId() {
+  var sheet = getSheet(RESP_SHEET, RESP_HEADERS);
+  if (sheet.getLastRow() < 2) return "데이터 없음";
+
+  var lastCol = sheet.getLastColumn();
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  var empIdIdx = headers.indexOf("empId");
+  var tpIdx = headers.indexOf("timepoint");
+  var tsIdx = headers.indexOf("timestamp");
+  var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, lastCol).getValues();
+
+  // empId + timepoint 조합별로 가장 마지막 행 번호 찾기
+  var latest = {}; // key: "empId|timepoint" → {rowNum, timestamp}
+  data.forEach(function (row, i) {
+    var eid = String(row[empIdIdx]);
+    var tp = String(row[tpIdx]);
+    var ts = String(row[tsIdx]);
+    var key = eid + "|" + tp;
+    if (!latest[key] || ts > latest[key].ts) {
+      latest[key] = { rowNum: i + 2, ts: ts };
+    }
+  });
+
+  // 유지할 행 번호 Set
+  var keepRows = {};
+  Object.keys(latest).forEach(function (key) {
+    keepRows[latest[key].rowNum] = true;
+  });
+
+  // 삭제할 행 (유지 대상이 아닌 행)
+  var rowsToDelete = [];
+  data.forEach(function (row, i) {
+    var rowNum = i + 2;
+    if (!keepRows[rowNum]) {
+      rowsToDelete.push(rowNum);
+    }
+  });
+
+  if (rowsToDelete.length === 0) return "중복 없음";
+
+  rowsToDelete.reverse().forEach(function (rowNum) {
+    sheet.deleteRow(rowNum);
+  });
+
+  var msg = "중복 제거: " + rowsToDelete.length + "행 삭제 (남은 행: " + Object.keys(latest).length + ")";
+  Logger.log(msg);
+  return msg;
+}
+
 // ── API: 전체 데이터 내보내기 ────────────────────────
 function getExportData() {
   var responses = readAllResponses();
