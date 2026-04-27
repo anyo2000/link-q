@@ -93,6 +93,7 @@ function doGet(e) {
       case "branch":    result = getBranchReport(e.parameter.branch); break;
       case "fp":        result = getFPDetail(e.parameter.empId); break;
       case "export":    result = getExportData(); break;
+      case "sendEmail": result = sendExportEmail(e.parameter.email); break;
       default:          result = getSummary();
     }
   } catch (err) {
@@ -1106,6 +1107,40 @@ function deduplicateByEmpId() {
   var msg = "중복 제거: " + rowsToDelete.length + "행 삭제 (남은 행: " + Object.keys(latest).length + ")";
   Logger.log(msg);
   return msg;
+}
+
+// ── API: CSV 이메일 발송 ────────────────────────────
+function sendExportEmail(email) {
+  var responses = readAllResponses();
+  var master = readMasterMap();
+  var header = "timestamp,branch,empId,name,timepoint,L1,L2,I1,I2,N1,N2,K1,K2,bonusStage,bonusApplied,bonusReaction,comment,grade,tenure,age,gender,channel";
+  var lines = [header];
+  responses.forEach(function(r) {
+    var m = master[r.empId] || {};
+    var ans = r.answers || new Array(8).fill("");
+    var row = [
+      r.timestamp || "", r.branch || "", r.empId || "",
+      r.name || m.name || "", r.timepoint || "",
+      ans[0], ans[1], ans[2], ans[3], ans[4], ans[5], ans[6], ans[7],
+      r.bonusStage || "",
+      (r.bonusApplied || []).join(";"),
+      r.bonusReaction || "",
+      '"' + (r.comment || "").replace(/"/g, '""') + '"',
+      m.grade || "", m.tenure || "", m.age || "", m.gender || "", m.channel || ""
+    ];
+    lines.push(row.join(","));
+  });
+  var bom = "\uFEFF";
+  var csvContent = bom + lines.join("\n");
+  var fileName = "link_responses_" + Utilities.formatDate(new Date(), "Asia/Seoul", "yyyy-MM-dd") + ".csv";
+  var blob = Utilities.newBlob(csvContent, "text/csv", fileName);
+  MailApp.sendEmail({
+    to: email,
+    subject: "[LINK-Q] 진단 데이터 내보내기 (" + fileName.replace(".csv","") + ")",
+    body: "LINK-Q 진단 응답 데이터 " + responses.length + "건을 첨부합니다.",
+    attachments: [blob]
+  });
+  return { success: true, count: responses.length };
 }
 
 // ── API: 전체 데이터 내보내기 ────────────────────────

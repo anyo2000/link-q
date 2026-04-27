@@ -2310,11 +2310,29 @@ function buildAdminData(wrap) {
   exportStatus.textContent = "전체 응답: " + responses.length + "건";
   exportCard.appendChild(exportStatus);
 
-  var csvBtn = el("button", "btn-full", "CSV 다운로드");
-  csvBtn.addEventListener("click", function() {
-    exportCSV(responses);
+  var emailInput = el("input");
+  emailInput.type = "email";
+  emailInput.placeholder = "받을 이메일 주소 입력";
+  emailInput.style.cssText = "width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;font-size:14px;margin-bottom:12px;box-sizing:border-box;";
+  exportCard.appendChild(emailInput);
+
+  var emailBtn = el("button", "btn-full", "이메일로 보내기");
+  emailBtn.addEventListener("click", function() {
+    var email = emailInput.value.trim();
+    if (!email) { alert("이메일 주소를 입력해주세요."); return; }
+    emailBtn.disabled = true;
+    emailBtn.textContent = "발송 중...";
+    jsonpFetch("sendEmail", { email: email }, function(res) {
+      emailBtn.disabled = false;
+      emailBtn.textContent = "이메일로 보내기";
+      if (res.success) {
+        alert("CSV 파일을 " + email + "로 발송했습니다. (" + res.count + "건)");
+      } else {
+        alert("발송 실패: " + (res.error || "알 수 없는 오류"));
+      }
+    });
   });
-  exportCard.appendChild(csvBtn);
+  exportCard.appendChild(emailBtn);
   wrap.appendChild(exportCard);
 }
 
